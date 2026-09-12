@@ -4,7 +4,6 @@ import React, {
   createContext,
   useContext,
   useState,
-  useEffect,
   useCallback,
   useMemo,
 } from "react";
@@ -14,7 +13,6 @@ import {
   DEFAULT_BRANCH,
   DEFAULT_DEMO_EMPLOYEE,
   EmployeeInfo,
-  detectBranchFromEmployeeId,
   getBranchByCode,
   resolveEmployeeDetails,
 } from "@/config/branches";
@@ -36,59 +34,57 @@ const STORAGE_KEY = "pro_badminton_employee_session";
 
 const BranchContext = createContext<BranchContextType | undefined>(undefined);
 
-export function BranchProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<EmployeeInfo>(DEFAULT_DEMO_EMPLOYEE);
-  const [isMounted, setIsMounted] = useState(false);
+function getInitialSession(): EmployeeInfo {
+  if (typeof window === "undefined") {
+    return DEFAULT_DEMO_EMPLOYEE;
+  }
+  try {
+    // 1. Check if URL has ?branch= or ?employeeId= for developer convenience
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlEmpId = searchParams.get("employeeId") || searchParams.get("empId");
+    const urlBranch = searchParams.get("branch");
 
-  // Restore stored session or parse URL parameter on mount (client-side only)
-  useEffect(() => {
-    setIsMounted(true);
-    try {
-      // 1. Check if URL has ?branch= or ?employeeId= for developer convenience
-      const searchParams = new URLSearchParams(window.location.search);
-      const urlEmpId = searchParams.get("employeeId") || searchParams.get("empId");
-      const urlBranch = searchParams.get("branch");
-
-      if (urlEmpId) {
-        const resolved = resolveEmployeeDetails(urlEmpId);
-        setSession(resolved);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved));
-        return;
-      }
-
-      if (urlBranch) {
-        const matched = getBranchByCode(urlBranch);
-        if (matched) {
-          const resolved: EmployeeInfo = {
-            employeeId: matched.code === "MNK" ? "MNK001" : "NLG004",
-            employeeName: matched.code === "MNK" ? "Vikram Reddy" : "Rahul Sharma",
-            branch: matched,
-          };
-          setSession(resolved);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved));
-          return;
-        }
-      }
-
-      // 2. Read from localStorage if available
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed: EmployeeInfo = JSON.parse(stored);
-        // Validate that branch is still valid in registry
-        const branchObj =
-          BRANCHES.find((b) => b.id === parsed.branch?.id || b.code === parsed.branch?.code) ||
-          DEFAULT_BRANCH;
-        setSession({
-          employeeId: parsed.employeeId || DEFAULT_DEMO_EMPLOYEE.employeeId,
-          employeeName: parsed.employeeName || DEFAULT_DEMO_EMPLOYEE.employeeName,
-          branch: branchObj,
-        });
-      }
-    } catch {
-      // Fallback silently to default
-      setSession(DEFAULT_DEMO_EMPLOYEE);
+    if (urlEmpId) {
+      const resolved = resolveEmployeeDetails(urlEmpId);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved));
+      return resolved;
     }
-  }, []);
+
+    if (urlBranch) {
+      const matched = getBranchByCode(urlBranch);
+      if (matched) {
+        const resolved: EmployeeInfo = {
+          employeeId: matched.code === "MNK" ? "MNK001" : "NLG004",
+          employeeName: matched.code === "MNK" ? "Vikram Reddy" : "Rahul Sharma",
+          branch: matched,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved));
+        return resolved;
+      }
+    }
+
+    // 2. Read from localStorage if available
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed: EmployeeInfo = JSON.parse(stored);
+      const branchObj =
+        BRANCHES.find(
+          (b) => b.id === parsed.branch?.id || b.code === parsed.branch?.code
+        ) || DEFAULT_BRANCH;
+      return {
+        employeeId: parsed.employeeId || DEFAULT_DEMO_EMPLOYEE.employeeId,
+        employeeName: parsed.employeeName || DEFAULT_DEMO_EMPLOYEE.employeeName,
+        branch: branchObj,
+      };
+    }
+  } catch {
+    // Fallback silently to default
+  }
+  return DEFAULT_DEMO_EMPLOYEE;
+}
+
+export function BranchProvider({ children }: { children: React.ReactNode }) {
+  const [session, setSession] = useState<EmployeeInfo>(getInitialSession);
 
   /**
    * Development Mode Login Handler:
@@ -107,7 +103,7 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved));
     } catch {
-      // Ignore storage errors in restricted iframe/sandbox
+      // Ignore storage errors
     }
     return resolved;
   }, []);
@@ -145,21 +141,19 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
   const switchBranch = useCallback((branchCodeOrId: string) => {
     const branch = getBranchByCode(branchCodeOrId);
     if (branch) {
-      setSession((prev) => {
-        const defaultForBranch = branch.code === "MNK" ? "MNK001" : "NLG004";
-        const dummyName = branch.code === "MNK" ? "Vikram Reddy" : "Rahul Sharma";
-        const updated: EmployeeInfo = {
-          employeeId: defaultForBranch,
-          employeeName: dummyName,
-          branch,
-        };
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        } catch {
-          // Ignore
-        }
-        return updated;
-      });
+      const defaultForBranch = branch.code === "MNK" ? "MNK001" : "NLG004";
+      const dummyName = branch.code === "MNK" ? "Vikram Reddy" : "Rahul Sharma";
+      const updated: EmployeeInfo = {
+        employeeId: defaultForBranch,
+        employeeName: dummyName,
+        branch,
+      };
+      setSession(updated);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // Ignore
+      }
     }
   }, []);
 

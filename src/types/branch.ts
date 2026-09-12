@@ -1,5 +1,3 @@
-import { Branch } from "@/config/branches";
-
 /**
  * Common metadata that every record across all modules must contain for multi-branch isolation.
  * Automatically stamped using the logged-in employee session.

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Plus, Users, ShieldCheck, CreditCard } from "lucide-react";
+import { Plus } from "lucide-react";
 import { MembershipRecord } from "@/types/membership";
 import { INITIAL_MEMBERSHIP_RECORDS } from "@/data/membership-mock";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
@@ -10,8 +10,10 @@ import { MembershipTable } from "./membership-table";
 import { MembershipDetailsDrawer } from "./membership-details-drawer";
 import { MembershipFormModal } from "./membership-form-modal";
 import { Button } from "@/components/ui/button";
+import { useBranch } from "@/context/branch-context";
 
 export function MembershipModule() {
+  const { currentBranch, employeeId, employeeName } = useBranch();
   const [memberships, setMemberships] = useState<MembershipRecord[]>(
     INITIAL_MEMBERSHIP_RECORDS
   );
@@ -28,9 +30,14 @@ export function MembershipModule() {
     null
   );
 
-  // Filter logic: Search by Primary Mobile + Month/Year
+  // Filter logic: Search by Primary Mobile + Branch Isolation + Month/Year
   const filteredMemberships = useMemo(() => {
     return memberships.filter((m) => {
+      // Branch Isolation
+      if (m.branchId && m.branchId !== currentBranch.id) {
+        return false;
+      }
+
       // Primary mobile search
       if (searchQuery.trim()) {
         const cleanQuery = searchQuery.trim().replace(/\D/g, "");
@@ -52,7 +59,7 @@ export function MembershipModule() {
 
       return true;
     });
-  }, [memberships, searchQuery, selectedMonth, selectedYear]);
+  }, [memberships, currentBranch.id, searchQuery, selectedMonth, selectedYear]);
 
   // Aggregate stats
   const metrics = useMemo(() => {
@@ -83,7 +90,7 @@ export function MembershipModule() {
               ...item,
               ...data,
               updatedAt: now,
-              lastModifiedBy: "EMP-1042",
+              lastModifiedBy: employeeId,
             } as MembershipRecord;
             return updated;
           }
@@ -98,7 +105,7 @@ export function MembershipModule() {
                 ...prev,
                 ...data,
                 updatedAt: now,
-                lastModifiedBy: "EMP-1042",
+                lastModifiedBy: employeeId,
               } as MembershipRecord)
             : null
         );
@@ -125,12 +132,14 @@ export function MembershipModule() {
         currentMonth: data.currentMonth || "March",
         year: 2026,
         additionalMembers: data.additionalMembers || [],
-        employeeId: "EMP-1042",
-        employeeName: "Alex Morgan",
-        createdBy: "EMP-1042",
+        branchId: currentBranch.id,
+        branchName: currentBranch.name,
+        employeeId: employeeId,
+        employeeName: employeeName,
+        createdBy: employeeId,
         createdAt: now,
         updatedAt: now,
-        lastModifiedBy: "EMP-1042",
+        lastModifiedBy: employeeId,
       };
 
       setMemberships((prev) => [newRecord, ...prev]);
@@ -142,11 +151,16 @@ export function MembershipModule() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Membership
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Membership
+            </h1>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+              📍 {currentBranch.name}
+            </span>
+          </div>
           <p className="text-sm text-slate-500 mt-1">
-            Manage memberships and linked family members.
+            Manage memberships and linked family members at <span className="font-semibold text-slate-700">{currentBranch.name} Branch</span>.
           </p>
         </div>
 

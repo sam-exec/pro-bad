@@ -20,11 +20,6 @@ export interface NavigationItem {
 
 export const DASHBOARD_NAV_ITEMS: NavigationItem[] = [
   {
-    id: "dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-  },
-  {
     id: "sales",
     label: "Sales",
     icon: CircleDollarSign,

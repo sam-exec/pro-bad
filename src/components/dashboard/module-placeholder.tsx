@@ -2,29 +2,44 @@ import React from "react";
 import { Construction } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { NavigationItem } from "./types";
+import { useBranch } from "@/context/branch-context";
 
 interface ModulePlaceholderProps {
   item: NavigationItem;
 }
 
 export function ModulePlaceholder({ item }: ModulePlaceholderProps) {
+  const { currentBranch, employeeId, employeeName } = useBranch();
   const Icon = item.icon;
 
   return (
     <div className="space-y-6">
       {/* Module Title Header */}
       <div className="border-b border-slate-200 pb-5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center">
-            <Icon className="w-5 h-5" aria-hidden="true" />
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center">
+              <Icon className="w-5 h-5" aria-hidden="true" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                {item.label}
+              </h1>
+              <p className="text-sm text-slate-500 mt-0.5">
+                {item.label} module for <span className="font-semibold text-slate-700">{currentBranch.name} Branch</span>.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              {item.label}
-            </h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              {item.label} module coming soon.
-            </p>
+
+          {/* Branch & Operator Badge */}
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              <span>📍</span>
+              <span>{currentBranch.name}</span>
+            </span>
+            <span className="text-xs text-slate-400 font-mono">
+              Emp: {employeeId}
+            </span>
           </div>
         </div>
       </div>
@@ -39,12 +54,14 @@ export function ModulePlaceholder({ item }: ModulePlaceholderProps) {
             {item.label} Module In Development
           </CardTitle>
           <CardDescription className="text-slate-500 max-w-md mt-2 text-sm">
-            This module is part of the next development phase. Records, filters, and operational workflows for {item.label.toLowerCase()} will be available here.
+            This module is part of the next development phase. All records created here will automatically bind to{" "}
+            <span className="font-semibold text-slate-700">{currentBranch.name} ({currentBranch.id})</span> and operator{" "}
+            <span className="font-semibold text-slate-700">{employeeName} ({employeeId})</span>.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0 pt-6">
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-            Phase 2 Feature
+            Multi-Branch Isolation Ready
           </span>
         </CardContent>
       </Card>

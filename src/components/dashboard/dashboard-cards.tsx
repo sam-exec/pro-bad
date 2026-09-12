@@ -75,23 +75,30 @@ function MetricCard({
   );
 }
 
+import { useBranch } from "@/context/branch-context";
+
 export function DashboardCards() {
+  const { currentBranch } = useBranch();
+  const isManikonda = currentBranch.code === "MNK";
+
   const cards: MetricCardProps[] = [
     {
       title: "Today's Sales",
-      value: "₹2,840.00",
-      subtext: "vs yesterday",
-      badgeText: "+14.5%",
+      value: isManikonda ? "₹2,150.00" : "₹3,480.00",
+      subtext: isManikonda ? "Puppalguda court counters" : "Huda layout counter",
+      badgeText: isManikonda ? "+9.8%" : "+14.5%",
       isPositive: true,
       icon: TrendingUp,
-      iconColor: "text-blue-600",
-      iconBg: "bg-blue-50 border border-blue-100",
+      iconColor: isManikonda ? "text-purple-600" : "text-blue-600",
+      iconBg: isManikonda
+        ? "bg-purple-50 border border-purple-100"
+        : "bg-blue-50 border border-blue-100",
     },
     {
       title: "New Admissions Today",
-      value: "12",
-      subtext: "4 Kids, 8 Adults",
-      badgeText: "+3",
+      value: isManikonda ? "8" : "14",
+      subtext: isManikonda ? "3 Kids, 5 Adults" : "6 Kids, 8 Adults",
+      badgeText: isManikonda ? "+2" : "+5",
       isPositive: true,
       icon: UserPlus,
       iconColor: "text-emerald-600",
@@ -99,18 +106,20 @@ export function DashboardCards() {
     },
     {
       title: "Active Memberships",
-      value: "348",
-      subtext: "98.2% retention rate",
-      badgeText: "Stable",
+      value: isManikonda ? "264" : "412",
+      subtext: isManikonda ? "97.4% retention" : "98.6% retention",
+      badgeText: isManikonda ? "Growing" : "Stable",
       isPositive: true,
       icon: CreditCard,
-      iconColor: "text-indigo-600",
-      iconBg: "bg-indigo-50 border border-indigo-100",
+      iconColor: isManikonda ? "text-purple-600" : "text-indigo-600",
+      iconBg: isManikonda
+        ? "bg-purple-50 border border-purple-100"
+        : "bg-indigo-50 border border-indigo-100",
     },
     {
       title: "Pending Tasks",
-      value: "6",
-      subtext: "2 high priority follow-ups",
+      value: isManikonda ? "3" : "5",
+      subtext: isManikonda ? "1 court equipment check" : "2 fee follow-ups",
       badgeText: "Action req.",
       isPositive: false,
       icon: CheckSquare,

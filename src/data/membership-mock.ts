@@ -1,6 +1,7 @@
 import { MembershipRecord } from "@/types/membership";
 
 export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
+  // --- Nallagandla Branch Records (NLG004 - Rahul Sharma) ---
   {
     id: "mem-1",
     recordId: "REC-MEM-001",
@@ -20,12 +21,14 @@ export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
     currentMonth: "March",
     year: 2026,
     remarks: "Family membership with 3 dependents. Access to all courts & gym.",
-    employeeId: "EMP-1042",
-    employeeName: "Alex Morgan",
-    createdBy: "EMP-1042",
+    branchId: "branch-nlg",
+    branchName: "Nallagandla",
+    employeeId: "NLG004",
+    employeeName: "Rahul Sharma",
+    createdBy: "NLG004",
     createdAt: "2026-01-01T09:00:00Z",
     updatedAt: "2026-03-01T10:00:00Z",
-    lastModifiedBy: "EMP-1042",
+    lastModifiedBy: "NLG004",
     additionalMembers: [
       {
         id: "lm-1-1",
@@ -69,12 +72,14 @@ export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
     currentMonth: "March",
     year: 2026,
     remarks: "Installment payment scheduled for next week.",
-    employeeId: "EMP-1042",
-    employeeName: "Alex Morgan",
-    createdBy: "EMP-1042",
+    branchId: "branch-nlg",
+    branchName: "Nallagandla",
+    employeeId: "NLG004",
+    employeeName: "Rahul Sharma",
+    createdBy: "NLG004",
     createdAt: "2026-01-10T11:30:00Z",
     updatedAt: "2026-03-02T14:15:00Z",
-    lastModifiedBy: "EMP-1042",
+    lastModifiedBy: "NLG004",
     additionalMembers: [
       {
         id: "lm-2-1",
@@ -111,12 +116,14 @@ export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
     currentMonth: "March",
     year: 2026,
     remarks: "Monthly renewal pending parent approval.",
-    employeeId: "EMP-1042",
-    employeeName: "Alex Morgan",
-    createdBy: "EMP-1042",
+    branchId: "branch-nlg",
+    branchName: "Nallagandla",
+    employeeId: "NLG004",
+    employeeName: "Rahul Sharma",
+    createdBy: "NLG004",
     createdAt: "2026-02-01T10:00:00Z",
     updatedAt: "2026-03-03T16:00:00Z",
-    lastModifiedBy: "EMP-1042",
+    lastModifiedBy: "NLG004",
     additionalMembers: [
       {
         id: "lm-3-1",
@@ -146,14 +153,18 @@ export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
     currentMonth: "February",
     year: 2026,
     remarks: "Single individual elite player membership.",
-    employeeId: "EMP-1042",
-    employeeName: "Alex Morgan",
-    createdBy: "EMP-1042",
+    branchId: "branch-nlg",
+    branchName: "Nallagandla",
+    employeeId: "NLG004",
+    employeeName: "Rahul Sharma",
+    createdBy: "NLG004",
     createdAt: "2026-01-05T08:00:00Z",
     updatedAt: "2026-02-28T09:00:00Z",
-    lastModifiedBy: "EMP-1042",
+    lastModifiedBy: "NLG004",
     additionalMembers: [],
   },
+
+  // --- Manikonda Branch Records (MNK001 - Vikram Reddy) ---
   {
     id: "mem-5",
     recordId: "REC-MEM-005",
@@ -172,13 +183,15 @@ export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
     status: "Trial",
     currentMonth: "February",
     year: 2026,
-    remarks: "Quarterly corporate trial family package.",
-    employeeId: "EMP-1042",
-    employeeName: "Alex Morgan",
-    createdBy: "EMP-1042",
+    remarks: "Quarterly corporate trial family package at Manikonda.",
+    branchId: "branch-mnk",
+    branchName: "Manikonda",
+    employeeId: "MNK001",
+    employeeName: "Vikram Reddy",
+    createdBy: "MNK001",
     createdAt: "2026-02-15T13:00:00Z",
     updatedAt: "2026-02-20T11:30:00Z",
-    lastModifiedBy: "EMP-1042",
+    lastModifiedBy: "MNK001",
     additionalMembers: [
       {
         id: "lm-5-1",
@@ -208,12 +221,14 @@ export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
     currentMonth: "January",
     year: 2026,
     remarks: "Temporarily inactive due to club relocation.",
-    employeeId: "EMP-1042",
-    employeeName: "Alex Morgan",
-    createdBy: "EMP-1042",
+    branchId: "branch-mnk",
+    branchName: "Manikonda",
+    employeeId: "MNK001",
+    employeeName: "Vikram Reddy",
+    createdBy: "MNK001",
     createdAt: "2026-01-02T10:00:00Z",
     updatedAt: "2026-01-25T15:00:00Z",
-    lastModifiedBy: "EMP-1042",
+    lastModifiedBy: "MNK001",
     additionalMembers: [
       {
         id: "lm-6-1",

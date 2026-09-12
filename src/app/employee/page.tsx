@@ -8,13 +8,13 @@ import { DASHBOARD_NAV_ITEMS } from "@/components/dashboard/types";
 import { cn } from "@/lib/utils";
 
 export default function EmployeeDashboardPage() {
-  const [currentModule, setCurrentModule] = useState("dashboard");
+  const [currentModule, setCurrentModule] = useState("sales");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Determine current page title
   const activeItem = DASHBOARD_NAV_ITEMS.find((item) => item.id === currentModule);
-  const currentTitle = activeItem ? activeItem.label : "Dashboard";
+  const currentTitle = activeItem ? activeItem.label : "Sales";
 
   return (
     <div className="h-screen w-full flex overflow-hidden bg-slate-50 antialiased">

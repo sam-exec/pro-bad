@@ -2,7 +2,7 @@ import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata = {
   title: "Employee Login | Employee Management System",
-  description: "Sign in to manage daily records.",
+  description: "Sign in to access your workspace.",
 };
 
 export default function EmployeeLoginPage() {
@@ -10,9 +10,9 @@ export default function EmployeeLoginPage() {
     <LoginForm
       role="employee"
       title="Employee Login"
-      subtitle="Sign in to manage daily records."
+      subtitle="Sign in to access your workspace."
       idLabel="Employee ID"
-      idPlaceholder="e.g. EMP-1042"
+      idPlaceholder="Enter your Employee ID"
       targetRoute="/employee"
     />
   );

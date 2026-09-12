@@ -4,6 +4,7 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { BranchProvider } from "@/context/branch-context";
 
 export function PublicShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -12,15 +13,17 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   const isDashboardRoute =
     pathname?.startsWith("/employee") || pathname?.startsWith("/admin");
 
-  if (isDashboardRoute) {
-    return <div className="h-screen w-screen overflow-hidden flex flex-col">{children}</div>;
-  }
-
   return (
-    <>
-      <Navbar />
-      <main className="flex-1 flex flex-col">{children}</main>
-      <Footer />
-    </>
+    <BranchProvider>
+      {isDashboardRoute ? (
+        <div className="h-screen w-screen overflow-hidden flex flex-col">{children}</div>
+      ) : (
+        <>
+          <Navbar />
+          <main className="flex-1 flex flex-col">{children}</main>
+          <Footer />
+        </>
+      )}
+    </BranchProvider>
   );
 }

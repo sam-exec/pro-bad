@@ -10,8 +10,10 @@ import { StudentTable } from "./student-table";
 import { StudentDetailsDrawer } from "./student-details-drawer";
 import { StudentFormModal } from "./student-form-modal";
 import { Button } from "@/components/ui/button";
+import { useBranch } from "@/context/branch-context";
 
 export function KidsCoachingModule() {
+  const { currentBranch, employeeId, employeeName } = useBranch();
   const [students, setStudents] = useState<Student[]>(INITIAL_KIDS_STUDENTS);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
@@ -22,9 +24,14 @@ export function KidsCoachingModule() {
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
 
-  // Filtered Students (instant phone search + month/year filters)
+  // Filtered Students (Branch Isolation + phone search + month/year filters)
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
+      // Data Isolation: only show records belonging to current branch
+      if (student.branchId && student.branchId !== currentBranch.id) {
+        return false;
+      }
+
       // Search by Mobile Number
       if (searchQuery.trim()) {
         const cleanQuery = searchQuery.trim().replace(/\D/g, "");
@@ -46,9 +53,9 @@ export function KidsCoachingModule() {
 
       return true;
     });
-  }, [students, searchQuery, selectedMonth, selectedYear]);
+  }, [students, currentBranch.id, searchQuery, selectedMonth, selectedYear]);
 
-  // Summary Metrics for current view
+  // Summary Metrics for current branch view
   const metrics = useMemo(() => {
     const total = filteredStudents.length;
     const active = filteredStudents.filter((s) => s.status === "Active").length;
@@ -80,7 +87,7 @@ export function KidsCoachingModule() {
               dueAmount,
               paymentStatus,
               updatedAt: timestamp,
-              lastModifiedBy: "EMP-1042",
+              lastModifiedBy: employeeId,
             };
           }
           return s;
@@ -96,13 +103,13 @@ export function KidsCoachingModule() {
                 dueAmount,
                 paymentStatus,
                 updatedAt: timestamp,
-                lastModifiedBy: "EMP-1042",
+                lastModifiedBy: employeeId,
               }
             : null
         );
       }
     } else {
-      // Add new student
+      // Add new student: automatically assign branch & employee
       const nextCount = students.length + 1;
       const formattedId = `KC-2026-${String(nextCount).padStart(3, "0")}`;
       const newStudent: Student = {
@@ -111,10 +118,14 @@ export function KidsCoachingModule() {
         studentId: formattedId,
         dueAmount,
         paymentStatus,
-        createdBy: "EMP-1042",
+        branchId: currentBranch.id,
+        branchName: currentBranch.name,
+        employeeId: employeeId,
+        employeeName: employeeName,
+        createdBy: employeeId,
         createdAt: timestamp,
         updatedAt: timestamp,
-        lastModifiedBy: "EMP-1042",
+        lastModifiedBy: employeeId,
       };
       setStudents((prev) => [newStudent, ...prev]);
     }
@@ -135,11 +146,16 @@ export function KidsCoachingModule() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Kids Coaching
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Kids Coaching
+            </h1>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+              📍 {currentBranch.name}
+            </span>
+          </div>
           <p className="text-sm text-slate-500 mt-1">
-            Manage all Kids Coaching students.
+            Manage Kids Coaching students for <span className="font-semibold text-slate-700">{currentBranch.name} Branch</span>.
           </p>
         </div>
 

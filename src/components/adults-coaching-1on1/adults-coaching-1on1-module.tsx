@@ -25,8 +25,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { useBranch } from "@/context/branch-context";
 
 export function AdultsCoaching1on1Module() {
+  const { currentBranch, employeeId, employeeName } = useBranch();
   const [members, setMembers] = useState<Adult1on1Member[]>(INITIAL_ADULTS_1ON1_MEMBERS);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
@@ -86,9 +88,10 @@ export function AdultsCoaching1on1Module() {
     setErrors({});
   }, [memberToEdit, isFormOpen]);
 
-  // Search by Mobile Number
+  // Search by Mobile Number + Branch Isolation
   const filteredMembers = useMemo(() => {
     return members.filter((m) => {
+      if (m.branchId && m.branchId !== currentBranch.id) return false;
       if (searchQuery.trim()) {
         const cleanQuery = searchQuery.trim().replace(/\D/g, "");
         const cleanPhone = m.mobileNumber.replace(/\D/g, "");
@@ -98,7 +101,7 @@ export function AdultsCoaching1on1Module() {
       if (m.year !== selectedYear) return false;
       return true;
     });
-  }, [members, searchQuery, selectedMonth, selectedYear]);
+  }, [members, currentBranch.id, searchQuery, selectedMonth, selectedYear]);
 
   // Save / Edit Handler
   const handleSave = (e: React.FormEvent) => {
@@ -150,7 +153,7 @@ export function AdultsCoaching1on1Module() {
               status,
               remarks: remarks.trim(),
               updatedAt: now,
-              lastModifiedBy: "EMP-1042",
+              lastModifiedBy: employeeId,
             };
             return updated;
           }
@@ -179,7 +182,7 @@ export function AdultsCoaching1on1Module() {
                 status,
                 remarks: remarks.trim(),
                 updatedAt: now,
-                lastModifiedBy: "EMP-1042",
+                lastModifiedBy: employeeId,
               }
             : null
         );
@@ -209,12 +212,14 @@ export function AdultsCoaching1on1Module() {
         year: 2026,
         status,
         remarks: remarks.trim(),
-        employeeId: "EMP-1042",
-        employeeName: "Alex Morgan",
-        createdBy: "EMP-1042",
+        branchId: currentBranch.id,
+        branchName: currentBranch.name,
+        employeeId: employeeId,
+        employeeName: employeeName,
+        createdBy: employeeId,
         createdAt: now,
         updatedAt: now,
-        lastModifiedBy: "EMP-1042",
+        lastModifiedBy: employeeId,
       };
       setMembers((prev) => [newMember, ...prev]);
     }
@@ -228,11 +233,16 @@ export function AdultsCoaching1on1Module() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Adults Coaching 1-1
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Adults Coaching 1-1
+            </h1>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+              📍 {currentBranch.name}
+            </span>
+          </div>
           <p className="text-sm text-slate-500 mt-1">
-            Manage one-to-one coaching members.
+            Manage one-to-one adult coaching members at <span className="font-semibold text-slate-700">{currentBranch.name} Branch</span>.
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs">

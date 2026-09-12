@@ -16,8 +16,10 @@ import { FlexibleMembershipDrawer } from "./flexible-membership-drawer";
 import { FlexibleMembershipModal } from "./flexible-membership-modal";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { Button } from "@/components/ui/button";
+import { useBranch } from "@/context/branch-context";
 
 export function FlexibleMembershipModule() {
+  const { currentBranch, employeeId, employeeName } = useBranch();
   const [memberships, setMemberships] = useState<FlexibleMembershipRecord[]>(
     INITIAL_FLEXIBLE_MEMBERSHIPS
   );
@@ -32,9 +34,14 @@ export function FlexibleMembershipModule() {
   const [membershipToEdit, setMembershipToEdit] =
     useState<FlexibleMembershipRecord | null>(null);
 
-  // Filtering Logic
+  // Filtering Logic: Branch Isolation + Search + Status + Expiry
   const filteredMemberships = useMemo(() => {
     return memberships.filter((m) => {
+      // 0. Branch Isolation
+      if (m.branchId && m.branchId !== currentBranch.id) {
+        return false;
+      }
+
       // 1. Search by primary phone number
       if (searchQuery.trim()) {
         const cleanQuery = searchQuery.trim().replace(/\D/g, "");
@@ -65,7 +72,7 @@ export function FlexibleMembershipModule() {
 
       return true;
     });
-  }, [memberships, searchQuery, statusFilter, expiryFilter]);
+  }, [memberships, currentBranch.id, searchQuery, statusFilter, expiryFilter]);
 
   // Save / Update Handler
   const handleSave = (
@@ -82,7 +89,7 @@ export function FlexibleMembershipModule() {
               ...item,
               ...data,
               updatedAt: now,
-              lastModifiedBy: "EMP-1042",
+              lastModifiedBy: employeeId,
             } as FlexibleMembershipRecord;
             return updated;
           }
@@ -97,7 +104,7 @@ export function FlexibleMembershipModule() {
                 ...prev,
                 ...data,
                 updatedAt: now,
-                lastModifiedBy: "EMP-1042",
+                lastModifiedBy: employeeId,
               } as FlexibleMembershipRecord)
             : null
         );
@@ -128,12 +135,14 @@ export function FlexibleMembershipModule() {
         status: computedStatus,
         remarks: data.remarks,
         additionalMembers: data.additionalMembers || [],
-        employeeId: "EMP-1042",
-        employeeName: "Alex Morgan",
-        createdBy: "EMP-1042",
+        branchId: currentBranch.id,
+        branchName: currentBranch.name,
+        employeeId: employeeId,
+        employeeName: employeeName,
+        createdBy: employeeId,
         createdAt: now,
         updatedAt: now,
-        lastModifiedBy: "EMP-1042",
+        lastModifiedBy: employeeId,
       };
 
       setMemberships((prev) => [newRecord, ...prev]);
@@ -145,11 +154,16 @@ export function FlexibleMembershipModule() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Flexible Membership
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Flexible Membership
+            </h1>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+              📍 {currentBranch.name}
+            </span>
+          </div>
           <p className="text-sm text-slate-500 mt-1">
-            Manage flexible 30-hour memberships.
+            Manage flexible 30-hour memberships at <span className="font-semibold text-slate-700">{currentBranch.name} Branch</span>.
           </p>
         </div>
 
@@ -160,8 +174,8 @@ export function FlexibleMembershipModule() {
         </div>
       </div>
 
-      {/* 4 Dashboard Cards */}
-      <FlexibleDashboardCards memberships={memberships} />
+      {/* 4 Dashboard Cards (Calculated on branch-isolated records) */}
+      <FlexibleDashboardCards memberships={filteredMemberships} />
 
       {/* Top Action Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
