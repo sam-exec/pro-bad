@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { MembershipRecord } from "@/types/membership";
-import { INITIAL_MEMBERSHIP_RECORDS } from "@/data/membership-mock";
+import { membershipService } from "@/services/excel";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
 import { MembershipTable } from "./membership-table";
@@ -14,8 +14,8 @@ import { useBranch } from "@/context/branch-context";
 
 export function MembershipModule() {
   const { currentBranch, employeeId, employeeName } = useBranch();
-  const [memberships, setMemberships] = useState<MembershipRecord[]>(
-    INITIAL_MEMBERSHIP_RECORDS
+  const [memberships, setMemberships] = useState<MembershipRecord[]>(() =>
+    membershipService.getSnapshot()
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
@@ -76,73 +76,53 @@ export function MembershipModule() {
   }, [filteredMemberships]);
 
   // Save / Update Handler
-  const handleSaveMembership = (
+  const handleSaveMembership = async (
     data: Partial<MembershipRecord>,
     idToEdit?: string
   ) => {
-    const now = new Date().toISOString();
-
     if (idToEdit) {
+      const updated = await membershipService.update(
+        idToEdit,
+        data,
+        employeeId
+      );
+
       setMemberships((prev) =>
-        prev.map((item) => {
-          if (item.id === idToEdit) {
-            const updated: MembershipRecord = {
-              ...item,
-              ...data,
-              updatedAt: now,
-              lastModifiedBy: employeeId,
-            } as MembershipRecord;
-            return updated;
-          }
-          return item;
-        })
+        prev.map((item) => (item.id === idToEdit ? updated : item))
       );
 
       if (viewingMembership?.id === idToEdit) {
-        setViewingMembership((prev) =>
-          prev
-            ? ({
-                ...prev,
-                ...data,
-                updatedAt: now,
-                lastModifiedBy: employeeId,
-              } as MembershipRecord)
-            : null
-        );
+        setViewingMembership(updated);
       }
     } else {
-      const nextCount = memberships.length + 1;
-      const newRecord: MembershipRecord = {
-        id: `mem-${Date.now()}`,
-        recordId: `REC-MEM-${String(nextCount).padStart(3, "0")}`,
-        membershipId: `MEM-2026-${String(nextCount).padStart(3, "0")}`,
-        primaryMemberName: data.primaryMemberName || "",
-        primaryMobileNumber: data.primaryMobileNumber || "",
-        email: data.email,
-        address: data.address || "",
-        membershipPlan: data.membershipPlan || "Yearly Family Club Pack",
-        joiningDate: data.joiningDate || new Date().toISOString().split("T")[0],
-        expiryDate: data.expiryDate || "2026-12-31",
-        monthlyFee: data.monthlyFee || 0,
-        amountPaid: data.amountPaid || 0,
-        dueAmount: data.dueAmount || 0,
-        paymentStatus: data.paymentStatus || "Paid",
-        status: data.status || "Active",
-        remarks: data.remarks,
-        currentMonth: data.currentMonth || "March",
-        year: 2026,
-        additionalMembers: data.additionalMembers || [],
-        branchId: currentBranch.id,
-        branchName: currentBranch.name,
-        employeeId: employeeId,
-        employeeName: employeeName,
-        createdBy: employeeId,
-        createdAt: now,
-        updatedAt: now,
-        lastModifiedBy: employeeId,
-      };
+      const created = await membershipService.create(
+        {
+          primaryMemberName: data.primaryMemberName || "",
+          primaryMobileNumber: data.primaryMobileNumber || "",
+          email: data.email,
+          address: data.address || "",
+          membershipPlan: data.membershipPlan || "Yearly Family Club Pack",
+          joiningDate: data.joiningDate || new Date().toISOString().split("T")[0],
+          expiryDate: data.expiryDate || "2026-12-31",
+          monthlyFee: data.monthlyFee || 0,
+          amountPaid: data.amountPaid || 0,
+          dueAmount: data.dueAmount || 0,
+          paymentStatus: data.paymentStatus || "Paid",
+          status: data.status || "Active",
+          remarks: data.remarks,
+          currentMonth: data.currentMonth || "March",
+          year: 2026,
+          additionalMembers: data.additionalMembers || [],
+        },
+        {
+          branchId: currentBranch.id,
+          branchName: currentBranch.name,
+          employeeId,
+          employeeName,
+        }
+      );
 
-      setMemberships((prev) => [newRecord, ...prev]);
+      setMemberships((prev) => [created, ...prev]);
     }
   };
 

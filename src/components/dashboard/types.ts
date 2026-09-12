@@ -58,6 +58,5 @@ export const DASHBOARD_NAV_ITEMS: NavigationItem[] = [
     id: "super-moms",
     label: "Super Moms",
     icon: Heart,
-    badge: "Special",
   },
 ];

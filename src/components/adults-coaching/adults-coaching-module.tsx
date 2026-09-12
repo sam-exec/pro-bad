@@ -15,7 +15,7 @@ import {
   ADULT_BATCHES,
 } from "@/types/coaching-modules";
 import { COACHES, MONTHS, YEARS, Gender, StudentStatus } from "@/types/kids-coaching";
-import { INITIAL_ADULTS_COACHING_MEMBERS } from "@/data/coaching-modules-mock";
+import { adultsService } from "@/services/excel";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
@@ -28,7 +28,9 @@ import { useBranch } from "@/context/branch-context";
 
 export function AdultsCoachingModule() {
   const { currentBranch, employeeId, employeeName } = useBranch();
-  const [members, setMembers] = useState<AdultCoachMember[]>(INITIAL_ADULTS_COACHING_MEMBERS);
+  const [members, setMembers] = useState<AdultCoachMember[]>(() =>
+    adultsService.getSnapshot()
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -100,7 +102,7 @@ export function AdultsCoachingModule() {
   }, [members, currentBranch.id, searchQuery, selectedMonth, selectedYear]);
 
   // Save / Edit Handler
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const newErrors: Record<string, string> = {};
@@ -126,89 +128,60 @@ export function AdultsCoachingModule() {
     const now = new Date().toISOString();
 
     if (memberToEdit) {
+      const updated = await adultsService.update(
+        memberToEdit.id,
+        {
+          memberName: memberName.trim(),
+          mobileNumber: mobileNumber.trim(),
+          age: Number(age),
+          gender,
+          joiningDate,
+          batch,
+          coach,
+          monthlyFee: Number(monthlyFee),
+          paidAmount: Number(paidAmount),
+          dueAmount,
+          paymentStatus,
+          currentMonth,
+          status,
+          remarks: remarks.trim(),
+        },
+        employeeId
+      );
+
       setMembers((prev) =>
-        prev.map((item) => {
-          if (item.id === memberToEdit.id) {
-            const updated: AdultCoachMember = {
-              ...item,
-              memberName: memberName.trim(),
-              mobileNumber: mobileNumber.trim(),
-              age: Number(age),
-              gender,
-              joiningDate,
-              batch,
-              coach,
-              monthlyFee: Number(monthlyFee),
-              paidAmount: Number(paidAmount),
-              dueAmount,
-              paymentStatus,
-              currentMonth,
-              status,
-              remarks: remarks.trim(),
-              updatedAt: now,
-              lastModifiedBy: employeeId,
-            };
-            return updated;
-          }
-          return item;
-        })
+        prev.map((item) => (item.id === memberToEdit.id ? updated : item))
       );
       if (viewingMember?.id === memberToEdit.id) {
-        setViewingMember((prev) =>
-          prev
-            ? {
-                ...prev,
-                memberName: memberName.trim(),
-                mobileNumber: mobileNumber.trim(),
-                age: Number(age),
-                gender,
-                joiningDate,
-                batch,
-                coach,
-                monthlyFee: Number(monthlyFee),
-                paidAmount: Number(paidAmount),
-                dueAmount,
-                paymentStatus,
-                currentMonth,
-                status,
-                remarks: remarks.trim(),
-                updatedAt: now,
-                lastModifiedBy: employeeId,
-              }
-            : null
-        );
+        setViewingMember(updated);
       }
     } else {
-      const nextCount = members.length + 1;
-      const newMember: AdultCoachMember = {
-        id: `ac-${Date.now()}`,
-        recordId: `REC-AC-${String(nextCount).padStart(3, "0")}`,
-        memberId: `AC-2026-${String(nextCount).padStart(3, "0")}`,
-        memberName: memberName.trim(),
-        mobileNumber: mobileNumber.trim(),
-        age: Number(age),
-        gender,
-        joiningDate,
-        batch,
-        coach,
-        monthlyFee: Number(monthlyFee),
-        paidAmount: Number(paidAmount),
-        dueAmount,
-        paymentStatus,
-        currentMonth,
-        year: 2026,
-        status,
-        remarks: remarks.trim(),
-        branchId: currentBranch.id,
-        branchName: currentBranch.name,
-        employeeId: employeeId,
-        employeeName: employeeName,
-        createdBy: employeeId,
-        createdAt: now,
-        updatedAt: now,
-        lastModifiedBy: employeeId,
-      };
-      setMembers((prev) => [newMember, ...prev]);
+      const created = await adultsService.create(
+        {
+          memberName: memberName.trim(),
+          mobileNumber: mobileNumber.trim(),
+          age: Number(age),
+          gender,
+          joiningDate,
+          batch,
+          coach,
+          monthlyFee: Number(monthlyFee),
+          paidAmount: Number(paidAmount),
+          dueAmount,
+          paymentStatus,
+          currentMonth,
+          year: 2026,
+          status,
+          remarks: remarks.trim(),
+        },
+        {
+          branchId: currentBranch.id,
+          branchName: currentBranch.name,
+          employeeId,
+          employeeName,
+        }
+      );
+      setMembers((prev) => [created, ...prev]);
     }
 
     setIsFormOpen(false);

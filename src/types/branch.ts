@@ -9,11 +9,13 @@ export interface BranchRecordMeta {
   employeeName: string; // e.g. "Rahul Sharma"
 }
 
+import { ExcelRecordMeta } from "./excel";
+
 /**
- * Future Sales Record schema incorporating branch data isolation
+ * Sales Record schema mapped to Sales.xlsx -> Sales Worksheet
  */
-export interface SalesRecord extends BranchRecordMeta {
-  id: string;
+export interface SalesRecord extends ExcelRecordMeta {
+  id: string; // Identifier (maps to recordId)
   invoiceNumber: string;
   customerName: string;
   customerMobile: string;
@@ -22,15 +24,14 @@ export interface SalesRecord extends BranchRecordMeta {
   amount: number;
   paymentMethod: "UPI" | "Cash" | "Card" | "NetBanking";
   date: string;
-  createdAt: string;
   createdBy: string;
 }
 
 /**
- * Future Super Moms Module Record schema incorporating branch data isolation
+ * Super Moms Module Record schema mapped to Super Moms.xlsx -> Super Moms Worksheet
  */
-export interface SuperMomsRecord extends BranchRecordMeta {
-  id: string;
+export interface SuperMomsRecord extends ExcelRecordMeta {
+  id: string; // Identifier (maps to recordId)
   memberId: string;
   memberName: string;
   mobileNumber: string;
@@ -41,6 +42,5 @@ export interface SuperMomsRecord extends BranchRecordMeta {
   dueAmount: number;
   joiningDate: string;
   status: "Active" | "Inactive" | "Trial";
-  createdAt: string;
   createdBy: string;
 }

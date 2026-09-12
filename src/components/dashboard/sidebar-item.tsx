@@ -43,12 +43,6 @@ export function SidebarItem({
           {item.label}
         </span>
       )}
-
-      {!isCollapsed && item.badge && !isActive && (
-        <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md bg-pink-100 text-pink-700">
-          {item.badge}
-        </span>
-      )}
     </button>
   );
 }

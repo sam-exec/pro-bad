@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { Plus, Users, Award, DollarSign } from "lucide-react";
 import { Student, StudentFormData } from "@/types/kids-coaching";
-import { INITIAL_KIDS_STUDENTS } from "@/data/kids-coaching-mock";
+import { kidsService } from "@/services/excel";
 import { SearchBar } from "./search-bar";
 import { MonthFilter } from "./month-filter";
 import { StudentTable } from "./student-table";
@@ -14,7 +14,7 @@ import { useBranch } from "@/context/branch-context";
 
 export function KidsCoachingModule() {
   const { currentBranch, employeeId, employeeName } = useBranch();
-  const [students, setStudents] = useState<Student[]>(INITIAL_KIDS_STUDENTS);
+  const [students, setStudents] = useState<Student[]>(() => kidsService.getSnapshot());
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -64,8 +64,8 @@ export function KidsCoachingModule() {
     return { total, active, totalCollected, totalDue };
   }, [filteredStudents]);
 
-  // Add / Edit Handlers
-  const handleSaveStudent = (formData: StudentFormData, studentIdToEdit?: string) => {
+  // Add / Edit Handlers via kidsService layer
+  const handleSaveStudent = async (formData: StudentFormData, studentIdToEdit?: string) => {
     const dueAmount = Math.max(0, formData.monthlyFee - formData.amountPaid);
     const paymentStatus =
       dueAmount === 0 && formData.amountPaid > 0
@@ -74,60 +74,34 @@ export function KidsCoachingModule() {
         ? "Partial"
         : "Pending";
 
-    const timestamp = new Date().toISOString();
-
     if (studentIdToEdit) {
-      // Edit existing
-      setStudents((prev) =>
-        prev.map((s) => {
-          if (s.id === studentIdToEdit) {
-            return {
-              ...s,
-              ...formData,
-              dueAmount,
-              paymentStatus,
-              updatedAt: timestamp,
-              lastModifiedBy: employeeId,
-            };
-          }
-          return s;
-        })
+      // Update through kidsService layer
+      const updated = await kidsService.update(
+        studentIdToEdit,
+        {
+          ...formData,
+          dueAmount,
+          paymentStatus,
+        },
+        employeeId
       );
-      // Update drawer if currently viewing
+
+      setStudents((prev) =>
+        prev.map((s) => (s.id === studentIdToEdit ? updated : s))
+      );
       if (viewingStudent?.id === studentIdToEdit) {
-        setViewingStudent((prev) =>
-          prev
-            ? {
-                ...prev,
-                ...formData,
-                dueAmount,
-                paymentStatus,
-                updatedAt: timestamp,
-                lastModifiedBy: employeeId,
-              }
-            : null
-        );
+        setViewingStudent(updated);
       }
     } else {
-      // Add new student: automatically assign branch & employee
-      const nextCount = students.length + 1;
-      const formattedId = `KC-2026-${String(nextCount).padStart(3, "0")}`;
-      const newStudent: Student = {
-        ...formData,
-        id: `kc-${Date.now()}`,
-        studentId: formattedId,
-        dueAmount,
-        paymentStatus,
+      // Create through kidsService layer
+      const created = await kidsService.create(formData, {
         branchId: currentBranch.id,
         branchName: currentBranch.name,
-        employeeId: employeeId,
-        employeeName: employeeName,
-        createdBy: employeeId,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        lastModifiedBy: employeeId,
-      };
-      setStudents((prev) => [newStudent, ...prev]);
+        employeeId,
+        employeeName,
+      });
+
+      setStudents((prev) => [created, ...prev]);
     }
   };
 

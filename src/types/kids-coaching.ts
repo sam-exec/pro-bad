@@ -2,7 +2,9 @@ export type PaymentStatus = "Paid" | "Partial" | "Pending";
 export type StudentStatus = "Active" | "Inactive" | "Trial";
 export type Gender = "Male" | "Female" | "Other";
 
-export interface Student {
+import { ExcelRecordMeta } from "./excel";
+
+export interface Student extends ExcelRecordMeta {
   id: string;
   studentId: string; // e.g. KC-2026-001
   studentName: string;
@@ -22,22 +24,14 @@ export interface Student {
   status: StudentStatus;
   remarks?: string;
 
-  // Multi-branch data isolation and employee tracking
-  branchId: string;
-  branchName: string;
-  employeeId: string;
-  employeeName: string;
-
   // Synchronization and audit metadata for Central Database & Master Excel Workbook
   createdBy: string; // Employee ID
-  createdAt: string; // ISO string
-  updatedAt: string; // ISO string
-  lastModifiedBy: string; // Employee ID
 }
 
 export type StudentFormData = Omit<
   Student,
   | "id"
+  | "recordId"
   | "studentId"
   | "dueAmount"
   | "paymentStatus"
@@ -51,6 +45,7 @@ export type StudentFormData = Omit<
   | "lastModifiedBy"
 > & {
   id?: string;
+  recordId?: string;
   studentId?: string;
 };
 

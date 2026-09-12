@@ -9,7 +9,7 @@ import {
   calculateExpiryDate,
   determineFlexibleStatus,
 } from "@/types/flexible-membership";
-import { INITIAL_FLEXIBLE_MEMBERSHIPS } from "@/data/flexible-membership-mock";
+import { membershipService } from "@/services/excel";
 import { FlexibleDashboardCards } from "./flexible-dashboard-cards";
 import { FlexibleMembershipTable } from "./flexible-membership-table";
 import { FlexibleMembershipDrawer } from "./flexible-membership-drawer";
@@ -20,8 +20,8 @@ import { useBranch } from "@/context/branch-context";
 
 export function FlexibleMembershipModule() {
   const { currentBranch, employeeId, employeeName } = useBranch();
-  const [memberships, setMemberships] = useState<FlexibleMembershipRecord[]>(
-    INITIAL_FLEXIBLE_MEMBERSHIPS
+  const [memberships, setMemberships] = useState<FlexibleMembershipRecord[]>(() =>
+    membershipService.getSnapshotFlexible()
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
@@ -75,42 +75,25 @@ export function FlexibleMembershipModule() {
   }, [memberships, currentBranch.id, searchQuery, statusFilter, expiryFilter]);
 
   // Save / Update Handler
-  const handleSave = (
+  const handleSave = async (
     data: Partial<FlexibleMembershipRecord>,
     idToEdit?: string
   ) => {
-    const now = new Date().toISOString();
-
     if (idToEdit) {
+      const updated = await membershipService.updateFlexible(
+        idToEdit,
+        data,
+        employeeId
+      );
+
       setMemberships((prev) =>
-        prev.map((item) => {
-          if (item.id === idToEdit) {
-            const updated: FlexibleMembershipRecord = {
-              ...item,
-              ...data,
-              updatedAt: now,
-              lastModifiedBy: employeeId,
-            } as FlexibleMembershipRecord;
-            return updated;
-          }
-          return item;
-        })
+        prev.map((item) => (item.id === idToEdit ? updated : item))
       );
 
       if (viewingMembership?.id === idToEdit) {
-        setViewingMembership((prev) =>
-          prev
-            ? ({
-                ...prev,
-                ...data,
-                updatedAt: now,
-                lastModifiedBy: employeeId,
-              } as FlexibleMembershipRecord)
-            : null
-        );
+        setViewingMembership(updated);
       }
     } else {
-      const nextCount = memberships.length + 1;
       const join = data.joiningDate || new Date().toISOString().split("T")[0];
       const expiry = calculateExpiryDate(join, 45);
       const totalH = data.totalHours || 30;
@@ -118,34 +101,31 @@ export function FlexibleMembershipModule() {
       const remainingH = Math.max(0, totalH - usedH);
       const computedStatus = determineFlexibleStatus(totalH, usedH, expiry);
 
-      const newRecord: FlexibleMembershipRecord = {
-        id: `flx-${Date.now()}`,
-        recordId: `REC-FLX-${String(nextCount).padStart(3, "0")}`,
-        flexibleMembershipId: `FLX-2026-${String(nextCount).padStart(3, "0")}`,
-        primaryMemberName: data.primaryMemberName || "",
-        primaryMobileNumber: data.primaryMobileNumber || "",
-        email: data.email,
-        address: data.address || "",
-        joiningDate: join,
-        expiryDate: expiry,
-        totalHours: totalH,
-        hoursUsed: usedH,
-        hoursRemaining: remainingH,
-        amountPaid: data.amountPaid || 450,
-        status: computedStatus,
-        remarks: data.remarks,
-        additionalMembers: data.additionalMembers || [],
-        branchId: currentBranch.id,
-        branchName: currentBranch.name,
-        employeeId: employeeId,
-        employeeName: employeeName,
-        createdBy: employeeId,
-        createdAt: now,
-        updatedAt: now,
-        lastModifiedBy: employeeId,
-      };
+      const created = await membershipService.createFlexible(
+        {
+          primaryMemberName: data.primaryMemberName || "",
+          primaryMobileNumber: data.primaryMobileNumber || "",
+          email: data.email,
+          address: data.address || "",
+          joiningDate: join,
+          expiryDate: expiry,
+          totalHours: totalH,
+          hoursUsed: usedH,
+          hoursRemaining: remainingH,
+          amountPaid: data.amountPaid || 450,
+          status: computedStatus,
+          remarks: data.remarks,
+          additionalMembers: data.additionalMembers || [],
+        },
+        {
+          branchId: currentBranch.id,
+          branchName: currentBranch.name,
+          employeeId,
+          employeeName,
+        }
+      );
 
-      setMemberships((prev) => [newRecord, ...prev]);
+      setMemberships((prev) => [created, ...prev]);
     }
   };
 

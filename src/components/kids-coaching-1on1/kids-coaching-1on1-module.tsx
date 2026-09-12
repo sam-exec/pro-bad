@@ -20,7 +20,7 @@ import {
   TIMING_SLOTS_1ON1,
 } from "@/types/coaching-modules";
 import { COACHES, MONTHS, YEARS, Gender, StudentStatus } from "@/types/kids-coaching";
-import { INITIAL_KIDS_1ON1_STUDENTS } from "@/data/coaching-modules-mock";
+import { kidsService } from "@/services/excel";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
@@ -33,7 +33,9 @@ import { useBranch } from "@/context/branch-context";
 
 export function KidsCoaching1on1Module() {
   const { currentBranch, employeeId, employeeName } = useBranch();
-  const [students, setStudents] = useState<Kids1on1Student[]>(INITIAL_KIDS_1ON1_STUDENTS);
+  const [students, setStudents] = useState<Kids1on1Student[]>(() =>
+    kidsService.getSnapshot1on1()
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -112,7 +114,7 @@ export function KidsCoaching1on1Module() {
   }, [students, currentBranch.id, searchQuery, selectedMonth, selectedYear]);
 
   // Save / Update Handler
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const newErrors: Record<string, string> = {};
@@ -140,100 +142,68 @@ export function KidsCoaching1on1Module() {
     const now = new Date().toISOString();
 
     if (studentToEdit) {
+      const updated = await kidsService.update1on1(
+        studentToEdit.id,
+        {
+          studentName: studentName.trim(),
+          parentName: parentName.trim(),
+          parentMobile: parentMobile.trim(),
+          age: Number(age),
+          gender,
+          coach,
+          preferredTiming,
+          sessionPackage,
+          totalSessions: Number(totalSessions),
+          sessionsCompleted: Number(sessionsCompleted),
+          sessionsRemaining: remainingSessions,
+          feeAmount: Number(feeAmount),
+          amountPaid: Number(amountPaid),
+          dueAmount,
+          paymentStatus,
+          status,
+          remarks: remarks.trim(),
+        },
+        employeeId
+      );
+
       setStudents((prev) =>
-        prev.map((item) => {
-          if (item.id === studentToEdit.id) {
-            const updated: Kids1on1Student = {
-              ...item,
-              studentName: studentName.trim(),
-              parentName: parentName.trim(),
-              parentMobile: parentMobile.trim(),
-              age: Number(age),
-              gender,
-              coach,
-              preferredTiming,
-              sessionPackage,
-              totalSessions: Number(totalSessions),
-              sessionsCompleted: Number(sessionsCompleted),
-              sessionsRemaining: remainingSessions,
-              feeAmount: Number(feeAmount),
-              amountPaid: Number(amountPaid),
-              dueAmount,
-              paymentStatus,
-              status,
-              remarks: remarks.trim(),
-              updatedAt: now,
-              lastModifiedBy: employeeId,
-            };
-            return updated;
-          }
-          return item;
-        })
+        prev.map((item) => (item.id === studentToEdit.id ? updated : item))
       );
       if (viewingStudent?.id === studentToEdit.id) {
-        setViewingStudent((prev) =>
-          prev
-            ? {
-                ...prev,
-                studentName: studentName.trim(),
-                parentName: parentName.trim(),
-                parentMobile: parentMobile.trim(),
-                age: Number(age),
-                gender,
-                coach,
-                preferredTiming,
-                sessionPackage,
-                totalSessions: Number(totalSessions),
-                sessionsCompleted: Number(sessionsCompleted),
-                sessionsRemaining: remainingSessions,
-                feeAmount: Number(feeAmount),
-                amountPaid: Number(amountPaid),
-                dueAmount,
-                paymentStatus,
-                status,
-                remarks: remarks.trim(),
-                updatedAt: now,
-                lastModifiedBy: employeeId,
-              }
-            : null
-        );
+        setViewingStudent(updated);
       }
     } else {
-      const nextCount = students.length + 1;
-      const newRecord: Kids1on1Student = {
-        id: `kc1-${Date.now()}`,
-        recordId: `REC-KC1-${String(nextCount).padStart(3, "0")}`,
-        studentId: `KC1-2026-${String(nextCount).padStart(3, "0")}`,
-        studentName: studentName.trim(),
-        parentName: parentName.trim(),
-        parentMobile: parentMobile.trim(),
-        age: Number(age),
-        gender,
-        coach,
-        preferredTiming,
-        sessionPackage,
-        totalSessions: Number(totalSessions),
-        sessionsCompleted: Number(sessionsCompleted),
-        sessionsRemaining: remainingSessions,
-        feeAmount: Number(feeAmount),
-        amountPaid: Number(amountPaid),
-        dueAmount,
-        paymentStatus,
-        joiningDate: new Date().toISOString().split("T")[0],
-        month: "March",
-        year: 2026,
-        status,
-        remarks: remarks.trim(),
-        branchId: currentBranch.id,
-        branchName: currentBranch.name,
-        employeeId: employeeId,
-        employeeName: employeeName,
-        createdBy: employeeId,
-        createdAt: now,
-        updatedAt: now,
-        lastModifiedBy: employeeId,
-      };
-      setStudents((prev) => [newRecord, ...prev]);
+      const created = await kidsService.create1on1(
+        {
+          studentName: studentName.trim(),
+          parentName: parentName.trim(),
+          parentMobile: parentMobile.trim(),
+          age: Number(age),
+          gender,
+          coach,
+          preferredTiming,
+          sessionPackage,
+          totalSessions: Number(totalSessions),
+          sessionsCompleted: Number(sessionsCompleted),
+          sessionsRemaining: remainingSessions,
+          feeAmount: Number(feeAmount),
+          amountPaid: Number(amountPaid),
+          dueAmount,
+          paymentStatus,
+          joiningDate: new Date().toISOString().split("T")[0],
+          month: "March",
+          year: 2026,
+          status,
+          remarks: remarks.trim(),
+        },
+        {
+          branchId: currentBranch.id,
+          branchName: currentBranch.name,
+          employeeId,
+          employeeName,
+        }
+      );
+      setStudents((prev) => [created, ...prev]);
     }
 
     setIsFormOpen(false);

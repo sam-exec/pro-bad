@@ -16,7 +16,7 @@ import {
   TIMING_SLOTS_1ON1,
 } from "@/types/coaching-modules";
 import { COACHES, MONTHS, YEARS, Gender, StudentStatus } from "@/types/kids-coaching";
-import { INITIAL_ADULTS_1ON1_MEMBERS } from "@/data/coaching-modules-mock";
+import { adultsService } from "@/services/excel";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
@@ -29,7 +29,9 @@ import { useBranch } from "@/context/branch-context";
 
 export function AdultsCoaching1on1Module() {
   const { currentBranch, employeeId, employeeName } = useBranch();
-  const [members, setMembers] = useState<Adult1on1Member[]>(INITIAL_ADULTS_1ON1_MEMBERS);
+  const [members, setMembers] = useState<Adult1on1Member[]>(() =>
+    adultsService.getSnapshot1on1()
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -104,7 +106,7 @@ export function AdultsCoaching1on1Module() {
   }, [members, currentBranch.id, searchQuery, selectedMonth, selectedYear]);
 
   // Save / Edit Handler
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const newErrors: Record<string, string> = {};
@@ -131,97 +133,66 @@ export function AdultsCoaching1on1Module() {
     const now = new Date().toISOString();
 
     if (memberToEdit) {
+      const updated = await adultsService.update1on1(
+        memberToEdit.id,
+        {
+          memberName: memberName.trim(),
+          mobileNumber: mobileNumber.trim(),
+          age: Number(age),
+          gender,
+          coach,
+          preferredTiming,
+          sessionPackage,
+          totalSessions: Number(totalSessions),
+          sessionsCompleted: Number(sessionsCompleted),
+          sessionsRemaining,
+          feeAmount: Number(feeAmount),
+          paidAmount: Number(paidAmount),
+          dueAmount,
+          paymentStatus,
+          status,
+          remarks: remarks.trim(),
+        },
+        employeeId
+      );
+
       setMembers((prev) =>
-        prev.map((item) => {
-          if (item.id === memberToEdit.id) {
-            const updated: Adult1on1Member = {
-              ...item,
-              memberName: memberName.trim(),
-              mobileNumber: mobileNumber.trim(),
-              age: Number(age),
-              gender,
-              coach,
-              preferredTiming,
-              sessionPackage,
-              totalSessions: Number(totalSessions),
-              sessionsCompleted: Number(sessionsCompleted),
-              sessionsRemaining,
-              feeAmount: Number(feeAmount),
-              paidAmount: Number(paidAmount),
-              dueAmount,
-              paymentStatus,
-              status,
-              remarks: remarks.trim(),
-              updatedAt: now,
-              lastModifiedBy: employeeId,
-            };
-            return updated;
-          }
-          return item;
-        })
+        prev.map((item) => (item.id === memberToEdit.id ? updated : item))
       );
       if (viewingMember?.id === memberToEdit.id) {
-        setViewingMember((prev) =>
-          prev
-            ? {
-                ...prev,
-                memberName: memberName.trim(),
-                mobileNumber: mobileNumber.trim(),
-                age: Number(age),
-                gender,
-                coach,
-                preferredTiming,
-                sessionPackage,
-                totalSessions: Number(totalSessions),
-                sessionsCompleted: Number(sessionsCompleted),
-                sessionsRemaining,
-                feeAmount: Number(feeAmount),
-                paidAmount: Number(paidAmount),
-                dueAmount,
-                paymentStatus,
-                status,
-                remarks: remarks.trim(),
-                updatedAt: now,
-                lastModifiedBy: employeeId,
-              }
-            : null
-        );
+        setViewingMember(updated);
       }
     } else {
-      const nextCount = members.length + 1;
-      const newMember: Adult1on1Member = {
-        id: `ac1-${Date.now()}`,
-        recordId: `REC-AC1-${String(nextCount).padStart(3, "0")}`,
-        memberId: `AC1-2026-${String(nextCount).padStart(3, "0")}`,
-        memberName: memberName.trim(),
-        mobileNumber: mobileNumber.trim(),
-        age: Number(age),
-        gender,
-        coach,
-        preferredTiming,
-        sessionPackage,
-        totalSessions: Number(totalSessions),
-        sessionsCompleted: Number(sessionsCompleted),
-        sessionsRemaining,
-        feeAmount: Number(feeAmount),
-        paidAmount: Number(paidAmount),
-        dueAmount,
-        paymentStatus,
-        joiningDate: new Date().toISOString().split("T")[0],
-        month: "March",
-        year: 2026,
-        status,
-        remarks: remarks.trim(),
-        branchId: currentBranch.id,
-        branchName: currentBranch.name,
-        employeeId: employeeId,
-        employeeName: employeeName,
-        createdBy: employeeId,
-        createdAt: now,
-        updatedAt: now,
-        lastModifiedBy: employeeId,
-      };
-      setMembers((prev) => [newMember, ...prev]);
+      const created = await adultsService.create1on1(
+        {
+          memberName: memberName.trim(),
+          mobileNumber: mobileNumber.trim(),
+          age: Number(age),
+          gender,
+          coach,
+          preferredTiming,
+          sessionPackage,
+          totalSessions: Number(totalSessions),
+          sessionsCompleted: Number(sessionsCompleted),
+          sessionsRemaining,
+          feeAmount: Number(feeAmount),
+          paidAmount: Number(paidAmount),
+          dueAmount,
+          paymentStatus,
+          joiningDate: new Date().toISOString().split("T")[0],
+          month: "March",
+          year: 2026,
+          status,
+          remarks: remarks.trim(),
+        },
+        {
+          branchId: currentBranch.id,
+          branchName: currentBranch.name,
+          employeeId,
+          employeeName,
+        }
+      );
+      setMembers((prev) => [created, ...prev]);
     }
 
     setIsFormOpen(false);
