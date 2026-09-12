@@ -6,8 +6,13 @@ import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { AdminEmployees } from "@/components/admin/modules/admin-employees";
 import { AdminSales } from "@/components/admin/modules/admin-sales";
-import { AdminStudents } from "@/components/admin/modules/admin-students";
-import { AdminMemberships } from "@/components/admin/modules/admin-memberships";
+import { AdminKidsCoaching } from "@/components/admin/modules/admin-kids-coaching";
+import { AdminKidsCoaching1on1 } from "@/components/admin/modules/admin-kids-coaching-1on1";
+import { AdminAdultsCoaching } from "@/components/admin/modules/admin-adults-coaching";
+import { AdminAdultsCoaching1on1 } from "@/components/admin/modules/admin-adults-coaching-1on1";
+import { AdminMembership } from "@/components/admin/modules/admin-membership";
+import { AdminFlexibleMembership } from "@/components/admin/modules/admin-flexible-membership";
+import { AdminSuperMoms } from "@/components/admin/modules/admin-super-moms";
 import { AdminBranches } from "@/components/admin/modules/admin-branches";
 import { AdminReports } from "@/components/admin/modules/admin-reports";
 import { AdminAuditLogs } from "@/components/admin/modules/admin-audit-logs";
@@ -16,10 +21,15 @@ import { cn } from "@/lib/utils";
 
 const MODULE_TITLES: Record<AdminModuleId, string> = {
   employees: "Employee Directory & Access Control",
-  sales: "Sales & Point of Sale",
-  students: "Students & Coaching Registry",
-  memberships: "Memberships & Subscriptions",
-  branches: "Branch Operations & Capacity",
+  sales: "Sales & Invoicing",
+  "kids-coaching": "Kids Coaching",
+  "kids-coaching-1-1": "Kids Coaching 1-1",
+  "adults-coaching": "Adults Coaching",
+  "adults-coaching-1-1": "Adults Coaching 1-1",
+  membership: "Club Membership",
+  "flexible-membership": "Flexible 30-Hour Membership",
+  "super-moms": "Super Moms Badminton",
+  branches: "Branch Operations & Facilities",
   reports: "Business Intelligence & Reports",
   "audit-logs": "Security & System Audit Trail",
   settings: "Platform Configuration & Master Settings",
@@ -39,10 +49,20 @@ export function AdminShell() {
         return <AdminEmployees selectedBranch={selectedBranch} />;
       case "sales":
         return <AdminSales selectedBranch={selectedBranch} />;
-      case "students":
-        return <AdminStudents selectedBranch={selectedBranch} />;
-      case "memberships":
-        return <AdminMemberships selectedBranch={selectedBranch} />;
+      case "kids-coaching":
+        return <AdminKidsCoaching selectedBranch={selectedBranch} />;
+      case "kids-coaching-1-1":
+        return <AdminKidsCoaching1on1 selectedBranch={selectedBranch} />;
+      case "adults-coaching":
+        return <AdminAdultsCoaching selectedBranch={selectedBranch} />;
+      case "adults-coaching-1-1":
+        return <AdminAdultsCoaching1on1 selectedBranch={selectedBranch} />;
+      case "membership":
+        return <AdminMembership selectedBranch={selectedBranch} />;
+      case "flexible-membership":
+        return <AdminFlexibleMembership selectedBranch={selectedBranch} />;
+      case "super-moms":
+        return <AdminSuperMoms selectedBranch={selectedBranch} />;
       case "branches":
         return <AdminBranches selectedBranch={selectedBranch} />;
       case "reports":

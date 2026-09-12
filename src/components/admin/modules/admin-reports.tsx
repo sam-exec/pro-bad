@@ -19,9 +19,31 @@ import { Button } from "@/components/ui/button";
 import { BRANCHES } from "@/config/branches";
 import { INITIAL_ADMIN_EMPLOYEES } from "@/data/admin-mock";
 
+import { ExportColumn, exportToExcel, exportToPdf } from "@/utils/export-engine";
+
 interface AdminReportsProps {
   selectedBranch: string;
 }
+
+const REPORT_COLUMNS: ExportColumn<any>[] = [
+  { header: "Program Module", key: "module" },
+  { header: "Target Workbook", key: "workbook" },
+  { header: "Enrolled / Active", key: "count" },
+  { header: "Collections", key: "revenue" },
+  { header: "Outstanding Due", key: "due" },
+  { header: "Health Status", key: "status" },
+];
+
+const REPORT_ROWS = [
+  { module: "Kids Coaching (Group)", workbook: "Kids Coaching.xlsx [Sheet 1]", count: "84 Students", revenue: "₹6,84,000", due: "₹14,200", status: "Healthy" },
+  { module: "Kids Coaching 1-1", workbook: "Kids Coaching.xlsx [Sheet 2]", count: "18 Students", revenue: "₹2,45,000", due: "₹6,500", status: "Healthy" },
+  { module: "Adults Coaching (Group)", workbook: "Adults Coaching.xlsx [Sheet 1]", count: "24 Members", revenue: "₹2,88,000", due: "₹4,800", status: "Healthy" },
+  { module: "Adults Coaching 1-1", workbook: "Adults Coaching.xlsx [Sheet 2]", count: "12 Members", revenue: "₹1,80,000", due: "₹3,200", status: "Healthy" },
+  { module: "Club Membership", workbook: "Membership.xlsx [Sheet 1]", count: "52 Members", revenue: "₹10,24,000", due: "₹24,000", status: "Active" },
+  { module: "Flexible 30-Hour Pass", workbook: "Membership.xlsx [Sheet 2]", count: "34 Passes", revenue: "₹4,12,000", due: "₹10,500", status: "Active" },
+  { module: "Super Moms Badminton", workbook: "Super Moms.xlsx [Sheet 1]", count: "16 Members", revenue: "₹1,44,000", due: "₹1,800", status: "Active" },
+  { module: "Point of Sale & Booking", workbook: "Sales.xlsx [Sheet 1]", count: "240 Orders", revenue: "₹3,84,000", due: "₹0", status: "Active" },
+];
 
 export function AdminReports({ selectedBranch }: AdminReportsProps) {
   const [dateRange, setDateRange] = useState("Month to Date (March 2026)");
@@ -31,7 +53,19 @@ export function AdminReports({ selectedBranch }: AdminReportsProps) {
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   const handleExport = (type: "Excel" | "PDF") => {
-    setExportNotice(`Generated ${type} export report successfully.`);
+    const filename = `Academy_Operational_Summary_${new Date().toISOString().split("T")[0]}`;
+    if (type === "Excel") {
+      exportToExcel(REPORT_ROWS, REPORT_COLUMNS, filename, "Executive Summary");
+    } else {
+      exportToPdf(
+        "Executive Operational Summary Report",
+        `Date Range: ${dateRange} | Branch: ${branchFilter === "all" ? "All Branches" : branchFilter}`,
+        REPORT_ROWS,
+        REPORT_COLUMNS,
+        filename
+      );
+    }
+    setExportNotice(`Downloaded ${type} report successfully (${filename}).`);
     setTimeout(() => setExportNotice(null), 3500);
   };
 
