@@ -282,7 +282,7 @@ export function AdultsCoaching1on1Module() {
               <table className="w-full border-collapse text-left">
                 <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
                   <tr>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Member ID</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                     <th className="px-3.5 py-3 whitespace-nowrap">Member Name</th>
                     <th className="px-3.5 py-3 whitespace-nowrap">Mobile Number</th>
                     <th className="px-3.5 py-3 text-center whitespace-nowrap">Age</th>
@@ -308,7 +308,7 @@ export function AdultsCoaching1on1Module() {
                   {filteredMembers.map((m) => (
                     <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
                       <td className="px-3.5 py-3 font-mono font-medium text-slate-900 whitespace-nowrap">
-                        {m.memberId}
+                        #{m.serialNumber}
                       </td>
                       <td className="px-3.5 py-3 font-semibold text-slate-900 whitespace-nowrap">
                         {m.memberName}
@@ -399,7 +399,7 @@ export function AdultsCoaching1on1Module() {
                         <span className="font-bold text-slate-900 text-sm">{m.memberName}</span>
                         <span className="text-[10px] text-slate-400 font-mono">({m.age}y, {m.gender})</span>
                       </div>
-                      <p className="text-xs text-slate-500 font-mono mt-0.5">{m.memberId}</p>
+                      <p className="text-xs text-slate-500 font-mono mt-0.5">#{m.serialNumber}</p>
                     </div>
                     <StatusBadge status={m.status} />
                   </div>
@@ -475,7 +475,7 @@ export function AdultsCoaching1on1Module() {
                     <h2 className="text-lg font-bold text-slate-900">{viewingMember.memberName}</h2>
                     <StatusBadge status={viewingMember.status} />
                   </div>
-                  <p className="text-xs text-slate-400 font-mono mt-0.5">{viewingMember.memberId}</p>
+                  <p className="text-xs text-slate-400 font-mono mt-0.5">Serial No: #{viewingMember.serialNumber}</p>
                 </div>
               </div>
               <button
@@ -743,7 +743,6 @@ export function AdultsCoaching1on1Module() {
                     className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm"
                   >
                     <option value="Active">Active</option>
-                    <option value="Trial">Trial</option>
                     <option value="Inactive">Inactive</option>
                   </select>
                 </div>

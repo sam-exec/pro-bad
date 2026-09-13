@@ -9,7 +9,8 @@ export type FlexibleStatus =
 
 export interface FlexibleMembershipRecord extends AuditMetadata {
   id: string;
-  flexibleMembershipId: string; // e.g. FLX-2026-001
+  serialNumber: number; // Auto-generated, read-only sequential number (1, 2, 3...)
+  flexibleMembershipId?: string; // Optional legacy identifier
   primaryMemberName: string;
   primaryMobileNumber: string;
   email?: string;

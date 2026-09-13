@@ -73,10 +73,53 @@ export class KidsService {
     );
   }
 
+  /**
+   * Cross-module validation:
+   * Returns true if student already exists in Kids One-to-One
+   */
+  async existsIn1on1(studentName: string, phone?: string): Promise<boolean> {
+    const all1on1 = await this.getAll1on1();
+    const cleanName = studentName.trim().toLowerCase();
+    const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
+
+    return all1on1.some((s) => {
+      const matchName = s.studentName.trim().toLowerCase() === cleanName;
+      const matchPhone = cleanPhone && s.parentMobile.replace(/\D/g, "") === cleanPhone;
+      return matchName || matchPhone;
+    });
+  }
+
+  /**
+   * Cross-module validation:
+   * Returns true if student already exists in Kids Coaching (Group)
+   */
+  async existsInGroup(studentName: string, phone?: string): Promise<boolean> {
+    const allGroup = await this.getAll();
+    const cleanName = studentName.trim().toLowerCase();
+    const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
+
+    return allGroup.some((s) => {
+      const matchName = s.studentName.trim().toLowerCase() === cleanName;
+      const matchPhone = cleanPhone && s.mobileNumber.replace(/\D/g, "") === cleanPhone;
+      return matchName || matchPhone;
+    });
+  }
+
   async create(
     formData: StudentFormData,
     auditMeta: BranchRecordMeta
   ): Promise<Student> {
+    // 1. Cross-module enrollment check: Prevent duplicate in Kids One-to-One
+    const alreadyIn1on1 = await this.existsIn1on1(
+      formData.studentName,
+      formData.mobileNumber
+    );
+    if (alreadyIn1on1) {
+      throw new Error(
+        `Enrollment Blocked: Student "${formData.studentName}" is already enrolled in Kids One-to-One. A student cannot be enrolled in both Kids Coaching and Kids One-to-One.`
+      );
+    }
+
     const dueAmount = Math.max(0, formData.monthlyFee - formData.amountPaid);
     const paymentStatus =
       dueAmount === 0 && formData.amountPaid > 0
@@ -86,18 +129,27 @@ export class KidsService {
         : "Pending";
 
     const timestamp = new Date().toISOString();
-    const existing = await this.getAll(auditMeta.branchId);
-    const count = existing.length + 1;
-    const formattedStudentId = `KC-2026-${String(count).padStart(3, "0")}`;
+    const allStudents = await this.getAll(); // Global to get max sequence
+    
+    // Auto-generate sequential Serial Number (Never reused, continues from latest)
+    const maxSerial = allStudents.reduce(
+      (max, s) => Math.max(max, s.serialNumber || 0),
+      0
+    );
+    const serialNumber = maxSerial + 1;
+    const formattedStudentId = `KC-2026-${String(serialNumber).padStart(3, "0")}`;
     const id = `kc-${Date.now()}`;
 
     const newStudent: Student = {
       ...formData,
       id,
       recordId: id,
+      serialNumber,
       studentId: formattedStudentId,
       dueAmount,
       paymentStatus,
+      paymentMethod: formData.paymentMethod || "UPI",
+      status: formData.status === "Inactive" ? "Inactive" : "Active",
       branchId: auditMeta.branchId,
       branchName: auditMeta.branchName,
       employeeId: auditMeta.employeeId,
@@ -195,6 +247,7 @@ export class KidsService {
       Kids1on1Student,
       | "id"
       | "recordId"
+      | "serialNumber"
       | "studentId"
       | "branchId"
       | "branchName"
@@ -207,17 +260,37 @@ export class KidsService {
     >,
     auditMeta: BranchRecordMeta
   ): Promise<Kids1on1Student> {
+    // 1. Cross-module enrollment check: Prevent duplicate in Kids Coaching Group
+    const alreadyInGroup = await this.existsInGroup(
+      data.studentName,
+      data.parentMobile
+    );
+    if (alreadyInGroup) {
+      throw new Error(
+        `Enrollment Blocked: Student "${data.studentName}" is already enrolled in Kids Coaching. A student cannot be enrolled in both Kids Coaching and Kids One-to-One.`
+      );
+    }
+
     const timestamp = new Date().toISOString();
-    const existing = await this.getAll1on1(auditMeta.branchId);
-    const count = existing.length + 1;
-    const formattedId = `KC1-2026-${String(count).padStart(3, "0")}`;
+    const all1on1 = await this.getAll1on1();
+    
+    // Auto-generate separate sequential Serial Number for Kids 1-on-1 (Never reused)
+    const maxSerial = all1on1.reduce(
+      (max, s) => Math.max(max, s.serialNumber || 0),
+      0
+    );
+    const serialNumber = maxSerial + 1;
+    const formattedId = `KC1-2026-${String(serialNumber).padStart(3, "0")}`;
     const id = `kc1-${Date.now()}`;
 
     const newRecord: Kids1on1Student = {
       ...data,
       id,
       recordId: id,
+      serialNumber,
       studentId: formattedId,
+      paymentMethod: data.paymentMethod || "UPI",
+      status: data.status === "Inactive" ? "Inactive" : "Active",
       branchId: auditMeta.branchId,
       branchName: auditMeta.branchName,
       employeeId: auditMeta.employeeId,

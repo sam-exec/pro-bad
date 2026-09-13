@@ -50,7 +50,7 @@ export function FlexibleMembershipTable({
           <table className="w-full border-collapse text-left">
             <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
               <tr>
-                <th className="px-3.5 py-3 whitespace-nowrap">Flexible ID</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Primary Member</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Primary Mobile</th>
                 <th className="px-3.5 py-3 text-center whitespace-nowrap">Total Members</th>
@@ -73,9 +73,9 @@ export function FlexibleMembershipTable({
 
                 return (
                   <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
-                    {/* ID */}
+                    {/* Serial Number */}
                     <td className="px-3.5 py-3 font-mono font-medium text-slate-900 whitespace-nowrap">
-                      {m.flexibleMembershipId}
+                      #{m.serialNumber}
                     </td>
 
                     {/* Primary Name */}
@@ -203,7 +203,7 @@ export function FlexibleMembershipTable({
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 font-mono mt-0.5">
-                      {m.flexibleMembershipId}
+                      #{m.serialNumber}
                     </p>
                   </div>
                   <FlexibleStatusBadge status={m.status} />

@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, Edit2, Users, Plus, Phone, Calendar, DollarSign } from "lucide-react";
+import { Eye, Edit2, Users, Plus, Phone, Calendar } from "lucide-react";
 import { Student } from "@/types/kids-coaching";
 import { StudentRow } from "./student-row";
 import { StatusBadge } from "./status-badge";
@@ -46,7 +46,7 @@ export function StudentTable({
           <table className="w-full border-collapse text-left">
             <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
               <tr>
-                <th className="px-3.5 py-3 whitespace-nowrap">Student ID</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Student Name</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Parent Name</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Mobile Number</th>
@@ -101,7 +101,7 @@ export function StudentTable({
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 font-mono mt-0.5">
-                    {student.studentId}
+                    #{student.serialNumber}
                   </p>
                 </div>
                 <StatusBadge status={student.status} />

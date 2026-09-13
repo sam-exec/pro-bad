@@ -5,7 +5,7 @@ import {
   Building2,
   Users,
   GraduationCap,
-  DollarSign,
+  IndianRupee,
   Phone,
   MapPin,
   CheckCircle2,
@@ -145,7 +145,7 @@ export function AdminBranches({ selectedBranch }: AdminBranchesProps) {
                       <span className="text-[11px] font-semibold uppercase tracking-wider">
                         Revenue
                       </span>
-                      <DollarSign className="w-4 h-4 text-emerald-600" />
+                      <IndianRupee className="w-4 h-4 text-emerald-600" />
                     </div>
                     <p className="text-xl font-extrabold text-slate-900">
                       ₹{(branch.revenue / 100000).toFixed(2)}L

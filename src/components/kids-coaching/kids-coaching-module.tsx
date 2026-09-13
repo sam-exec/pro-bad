@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Plus, Users, Award, DollarSign } from "lucide-react";
+import { Plus, Users, Award } from "lucide-react";
 import { Student, StudentFormData } from "@/types/kids-coaching";
 import { kidsService } from "@/services/excel";
 import { SearchBar } from "./search-bar";

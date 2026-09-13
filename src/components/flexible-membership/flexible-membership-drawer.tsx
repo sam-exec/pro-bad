@@ -65,7 +65,7 @@ export function FlexibleMembershipDrawer({
                 <FlexibleStatusBadge status={membership.status} />
               </div>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
-                {membership.flexibleMembershipId} &bull; 30-Hour Package
+                Serial No: #{membership.serialNumber} &bull; 30-Hour Package
               </p>
             </div>
           </div>

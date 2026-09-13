@@ -230,7 +230,7 @@ export const INITIAL_AUDIT_LOGS: AdminAuditLog[] = [
     employeeName: "Rahul Sharma",
     branchId: "branch-nlg",
     branchName: "Nallagandla",
-    action: "Registered Super Moms trial member Pooja Hegde (SM-2026-003)",
+    action: "Registered Super Moms member Pooja Hegde (SM-2026-003)",
     module: "Super Moms",
     timestamp: "2026-03-02 11:30 AM",
     details: "Coach: Priya Sharma, Midday Fitness Squad",

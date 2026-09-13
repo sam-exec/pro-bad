@@ -62,7 +62,7 @@ export const INITIAL_SUPER_MOMS_RECORDS: SuperMomsRecord[] = [
     amountPaid: 140,
     dueAmount: 0,
     joiningDate: "2026-02-15",
-    status: "Trial",
+    status: "Active",
     branchId: "branch-nlg",
     branchName: "Nallagandla",
     employeeId: "NLG004",

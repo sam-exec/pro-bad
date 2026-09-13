@@ -4,6 +4,7 @@ import React, {
   createContext,
   useContext,
   useState,
+  useEffect,
   useCallback,
   useMemo,
 } from "react";
@@ -34,57 +35,55 @@ const STORAGE_KEY = "pro_badminton_employee_session";
 
 const BranchContext = createContext<BranchContextType | undefined>(undefined);
 
-function getInitialSession(): EmployeeInfo {
-  if (typeof window === "undefined") {
-    return DEFAULT_DEMO_EMPLOYEE;
-  }
-  try {
-    // 1. Check if URL has ?branch= or ?employeeId= for developer convenience
-    const searchParams = new URLSearchParams(window.location.search);
-    const urlEmpId = searchParams.get("employeeId") || searchParams.get("empId");
-    const urlBranch = searchParams.get("branch");
-
-    if (urlEmpId) {
-      const resolved = resolveEmployeeDetails(urlEmpId);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved));
-      return resolved;
-    }
-
-    if (urlBranch) {
-      const matched = getBranchByCode(urlBranch);
-      if (matched) {
-        const resolved: EmployeeInfo = {
-          employeeId: matched.code === "MNK" ? "MNK001" : "NLG004",
-          employeeName: matched.code === "MNK" ? "Vikram Reddy" : "Rahul Sharma",
-          branch: matched,
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved));
-        return resolved;
-      }
-    }
-
-    // 2. Read from localStorage if available
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed: EmployeeInfo = JSON.parse(stored);
-      const branchObj =
-        BRANCHES.find(
-          (b) => b.id === parsed.branch?.id || b.code === parsed.branch?.code
-        ) || DEFAULT_BRANCH;
-      return {
-        employeeId: parsed.employeeId || DEFAULT_DEMO_EMPLOYEE.employeeId,
-        employeeName: parsed.employeeName || DEFAULT_DEMO_EMPLOYEE.employeeName,
-        branch: branchObj,
-      };
-    }
-  } catch {
-    // Fallback silently to default
-  }
-  return DEFAULT_DEMO_EMPLOYEE;
-}
-
 export function BranchProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<EmployeeInfo>(getInitialSession);
+  const [session, setSession] = useState<EmployeeInfo>(DEFAULT_DEMO_EMPLOYEE);
+
+  useEffect(() => {
+    try {
+      // 1. Check if URL has ?branch= or ?employeeId= for developer convenience
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlEmpId = searchParams.get("employeeId") || searchParams.get("empId");
+      const urlBranch = searchParams.get("branch");
+
+      if (urlEmpId) {
+        const resolved = resolveEmployeeDetails(urlEmpId);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved));
+        setSession(resolved);
+        return;
+      }
+
+      if (urlBranch) {
+        const matched = getBranchByCode(urlBranch);
+        if (matched) {
+          const resolved: EmployeeInfo = {
+            employeeId: matched.code === "MNK" ? "MNK001" : "NLG004",
+            employeeName: matched.code === "MNK" ? "Vikram Reddy" : "Rahul Sharma",
+            branch: matched,
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(resolved));
+          setSession(resolved);
+          return;
+        }
+      }
+
+      // 2. Read from localStorage if available
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed: EmployeeInfo = JSON.parse(stored);
+        const branchObj =
+          BRANCHES.find(
+            (b) => b.id === parsed.branch?.id || b.code === parsed.branch?.code
+          ) || DEFAULT_BRANCH;
+        setSession({
+          employeeId: parsed.employeeId || DEFAULT_DEMO_EMPLOYEE.employeeId,
+          employeeName: parsed.employeeName || DEFAULT_DEMO_EMPLOYEE.employeeName,
+          branch: branchObj,
+        });
+      }
+    } catch {
+      // Fallback silently to default
+    }
+  }, []);
 
   /**
    * Development Mode Login Handler:

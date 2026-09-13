@@ -108,6 +108,7 @@ export function MembershipModule() {
           amountPaid: data.amountPaid || 0,
           dueAmount: data.dueAmount || 0,
           paymentStatus: data.paymentStatus || "Paid",
+          paymentMethod: data.paymentMethod || "UPI",
           status: data.status || "Active",
           remarks: data.remarks,
           currentMonth: data.currentMonth || "March",

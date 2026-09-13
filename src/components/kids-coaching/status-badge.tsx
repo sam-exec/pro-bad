@@ -19,11 +19,6 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       bg: "bg-slate-50 border-slate-200",
       text: "text-slate-600",
     },
-    Trial: {
-      dot: "bg-amber-500",
-      bg: "bg-amber-50 border-amber-200/80",
-      text: "text-amber-700",
-    },
   };
 
   const current = styles[status] || styles.Active;

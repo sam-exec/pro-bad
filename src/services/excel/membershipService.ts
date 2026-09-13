@@ -77,17 +77,23 @@ export class MembershipService {
         return (
           phone.includes(cleanPhone) ||
           item.primaryMemberName.toLowerCase().includes(cleanText) ||
-          hasLinkedMatch
+          hasLinkedMatch ||
+          item.serialNumber?.toString() === query.trim()
         );
       }
     );
   }
 
+  /**
+   * Create New Membership:
+   * Assigns auto-generated, read-only, permanent Serial Number (never reused).
+   */
   async create(
     data: Omit<
       MembershipRecord,
       | "id"
       | "recordId"
+      | "serialNumber"
       | "membershipId"
       | "branchId"
       | "branchName"
@@ -101,16 +107,25 @@ export class MembershipService {
     auditMeta: BranchRecordMeta
   ): Promise<MembershipRecord> {
     const timestamp = new Date().toISOString();
-    const existing = await this.getAll(auditMeta.branchId);
-    const count = existing.length + 1;
-    const formattedId = `MEM-2026-${String(count).padStart(3, "0")}`;
+    const allMembers = await this.getAll();
+    
+    // Auto-generate permanent Serial Number
+    const maxSerial = allMembers.reduce(
+      (max, m) => Math.max(max, m.serialNumber || 0),
+      0
+    );
+    const serialNumber = maxSerial + 1;
+    const formattedId = `MEM-2026-${String(serialNumber).padStart(3, "0")}`;
     const id = `mem-${Date.now()}`;
 
     const newRecord: MembershipRecord = {
       ...data,
       id,
       recordId: id,
+      serialNumber,
       membershipId: formattedId,
+      paymentMethod: data.paymentMethod || "UPI",
+      status: data.status === "Inactive" ? "Inactive" : "Active",
       branchId: auditMeta.branchId,
       branchName: auditMeta.branchName,
       employeeId: auditMeta.employeeId,
@@ -128,6 +143,9 @@ export class MembershipService {
     );
   }
 
+  /**
+   * Update existing membership
+   */
   async update(
     id: string,
     updates: Partial<MembershipRecord>,
@@ -140,6 +158,44 @@ export class MembershipService {
       updates,
       modifierEmployeeId
     );
+  }
+
+  /**
+   * Renew Membership:
+   * Preserves the exact same Serial Number forever!
+   * Updates plan, expiry date, paid amount, and payment method on existing record.
+   */
+  async renewMembership(
+    id: string,
+    renewData: {
+      membershipPlan: "1 Month" | "3 Months" | "6 Months" | string;
+      expiryDate: string;
+      amountPaid: number;
+      paymentMethod: "Cash" | "UPI";
+      remarks?: string;
+    },
+    modifierEmployeeId: string
+  ): Promise<MembershipRecord> {
+    const existing = await this.getById(id);
+    if (!existing) {
+      throw new Error(`Membership record ${id} not found for renewal.`);
+    }
+
+    // Keep same serialNumber!
+    const updates: Partial<MembershipRecord> = {
+      membershipPlan: renewData.membershipPlan,
+      expiryDate: renewData.expiryDate,
+      amountPaid: renewData.amountPaid,
+      paymentMethod: renewData.paymentMethod,
+      dueAmount: Math.max(0, existing.monthlyFee - renewData.amountPaid),
+      paymentStatus: renewData.amountPaid >= existing.monthlyFee ? "Paid" : "Partial",
+      status: "Active",
+      remarks: renewData.remarks
+        ? `${existing.remarks ? existing.remarks + "; " : ""}Renewed: ${renewData.remarks}`
+        : existing.remarks,
+    };
+
+    return this.update(id, updates, modifierEmployeeId);
   }
 
   async delete(id: string): Promise<boolean> {
@@ -184,35 +240,12 @@ export class MembershipService {
     );
   }
 
-  async searchFlexible(query: string, branchId?: string): Promise<FlexibleMembershipRecord[]> {
-    const cleanPhone = query.trim().replace(/\D/g, "");
-    const cleanText = query.trim().toLowerCase();
-    return excelService.queryWorksheet<FlexibleMembershipRecord>(
-      this.flexibleWorkbook,
-      this.flexibleWorksheet,
-      (item) => {
-        if (branchId && item.branchId !== branchId) return false;
-        if (!cleanText) return true;
-        const phone = item.primaryMobileNumber.replace(/\D/g, "");
-        const hasLinkedMatch = item.additionalMembers.some(
-          (m) =>
-            m.name.toLowerCase().includes(cleanText) ||
-            m.mobileNumber.replace(/\D/g, "").includes(cleanPhone)
-        );
-        return (
-          phone.includes(cleanPhone) ||
-          item.primaryMemberName.toLowerCase().includes(cleanText) ||
-          hasLinkedMatch
-        );
-      }
-    );
-  }
-
   async createFlexible(
     data: Omit<
       FlexibleMembershipRecord,
       | "id"
       | "recordId"
+      | "serialNumber"
       | "flexibleMembershipId"
       | "branchId"
       | "branchName"
@@ -226,15 +259,20 @@ export class MembershipService {
     auditMeta: BranchRecordMeta
   ): Promise<FlexibleMembershipRecord> {
     const timestamp = new Date().toISOString();
-    const existing = await this.getAllFlexible(auditMeta.branchId);
-    const count = existing.length + 1;
-    const formattedId = `FLX-2026-${String(count).padStart(3, "0")}`;
-    const id = `flx-${Date.now()}`;
+    const existing = await this.getAllFlexible();
+    const maxSerial = existing.reduce(
+      (max, f) => Math.max(max, f.serialNumber || 0),
+      0
+    );
+    const serialNumber = maxSerial + 1;
+    const formattedId = `FLEX-2026-${String(serialNumber).padStart(3, "0")}`;
+    const id = `flex-${Date.now()}`;
 
     const newRecord: FlexibleMembershipRecord = {
       ...data,
       id,
       recordId: id,
+      serialNumber,
       flexibleMembershipId: formattedId,
       branchId: auditMeta.branchId,
       branchName: auditMeta.branchName,

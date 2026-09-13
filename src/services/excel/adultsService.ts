@@ -78,6 +78,7 @@ export class AdultsService {
       AdultCoachMember,
       | "id"
       | "recordId"
+      | "serialNumber"
       | "memberId"
       | "branchId"
       | "branchName"
@@ -91,15 +92,20 @@ export class AdultsService {
     auditMeta: BranchRecordMeta
   ): Promise<AdultCoachMember> {
     const timestamp = new Date().toISOString();
-    const existing = await this.getAll(auditMeta.branchId);
-    const count = existing.length + 1;
-    const formattedId = `AC-2026-${String(count).padStart(3, "0")}`;
+    const existing = await this.getAll();
+    const maxSerial = existing.reduce(
+      (max, m) => Math.max(max, m.serialNumber || 0),
+      0
+    );
+    const serialNumber = maxSerial + 1;
+    const formattedId = `AC-2026-${String(serialNumber).padStart(3, "0")}`;
     const id = `ac-${Date.now()}`;
 
     const newRecord: AdultCoachMember = {
       ...data,
       id,
       recordId: id,
+      serialNumber,
       memberId: formattedId,
       branchId: auditMeta.branchId,
       branchName: auditMeta.branchName,
@@ -194,6 +200,7 @@ export class AdultsService {
       Adult1on1Member,
       | "id"
       | "recordId"
+      | "serialNumber"
       | "memberId"
       | "branchId"
       | "branchName"
@@ -207,15 +214,20 @@ export class AdultsService {
     auditMeta: BranchRecordMeta
   ): Promise<Adult1on1Member> {
     const timestamp = new Date().toISOString();
-    const existing = await this.getAll1on1(auditMeta.branchId);
-    const count = existing.length + 1;
-    const formattedId = `AC1-2026-${String(count).padStart(3, "0")}`;
+    const existing = await this.getAll1on1();
+    const maxSerial = existing.reduce(
+      (max, m) => Math.max(max, m.serialNumber || 0),
+      0
+    );
+    const serialNumber = maxSerial + 1;
+    const formattedId = `AC1-2026-${String(serialNumber).padStart(3, "0")}`;
     const id = `ac1-${Date.now()}`;
 
     const newRecord: Adult1on1Member = {
       ...data,
       id,
       recordId: id,
+      serialNumber,
       memberId: formattedId,
       branchId: auditMeta.branchId,
       branchName: auditMeta.branchName,

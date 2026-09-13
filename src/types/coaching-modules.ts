@@ -1,4 +1,4 @@
-import { PaymentStatus, StudentStatus, Gender } from "./kids-coaching";
+import { PaymentStatus, StudentStatus, Gender, PaymentMethod } from "./kids-coaching";
 
 export interface AuditMetadata {
   recordId: string;
@@ -15,7 +15,8 @@ export interface AuditMetadata {
 // 1. Kids Coaching 1-1
 export interface Kids1on1Student extends AuditMetadata {
   id: string;
-  studentId: string; // e.g. KC1-2026-001
+  serialNumber: number; // Auto-generated separate sequence (1, 2, 3...)
+  studentId?: string; // Kept optional for legacy Excel mapping
   studentName: string;
   parentName: string;
   parentMobile: string;
@@ -31,6 +32,7 @@ export interface Kids1on1Student extends AuditMetadata {
   amountPaid: number;
   dueAmount: number;
   paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod; // Cash | UPI
   joiningDate: string;
   month: string;
   year: number;
@@ -41,7 +43,8 @@ export interface Kids1on1Student extends AuditMetadata {
 // 2. Adults Coaching (Group)
 export interface AdultCoachMember extends AuditMetadata {
   id: string;
-  memberId: string; // e.g. AC-2026-001
+  serialNumber: number; // Auto-generated sequential serial number (1, 2, 3...)
+  memberId?: string; // Optional legacy identifier
   memberName: string;
   mobileNumber: string;
   age: number;
@@ -62,7 +65,8 @@ export interface AdultCoachMember extends AuditMetadata {
 // 3. Adults Coaching 1-1
 export interface Adult1on1Member extends AuditMetadata {
   id: string;
-  memberId: string; // e.g. AC1-2026-001
+  serialNumber: number; // Auto-generated sequential serial number (1, 2, 3...)
+  memberId?: string; // Optional legacy identifier
   memberName: string;
   mobileNumber: string;
   age: number;

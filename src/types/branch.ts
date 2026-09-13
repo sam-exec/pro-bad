@@ -41,6 +41,6 @@ export interface SuperMomsRecord extends ExcelRecordMeta {
   amountPaid: number;
   dueAmount: number;
   joiningDate: string;
-  status: "Active" | "Inactive" | "Trial";
+  status: "Active" | "Inactive";
   createdBy: string;
 }

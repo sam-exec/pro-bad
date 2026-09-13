@@ -1,4 +1,4 @@
-import { PaymentStatus, StudentStatus } from "./kids-coaching";
+import { PaymentStatus, StudentStatus, PaymentMethod } from "./kids-coaching";
 import { AuditMetadata } from "./coaching-modules";
 
 export interface LinkedMember {
@@ -11,19 +11,21 @@ export interface LinkedMember {
 
 export interface MembershipRecord extends AuditMetadata {
   id: string;
-  membershipId: string; // e.g. MEM-2026-001
+  serialNumber: number; // Auto-generated, read-only permanent identifier (1, 2, 3...)
+  membershipId?: string; // Kept optional for legacy Excel mapping
   primaryMemberName: string;
   primaryMobileNumber: string;
   email?: string;
   address: string;
-  membershipPlan: string;
+  membershipPlan: "1 Month" | "3 Months" | "6 Months" | string;
   joiningDate: string; // YYYY-MM-DD
   expiryDate: string; // YYYY-MM-DD
   monthlyFee: number;
   amountPaid: number;
   dueAmount: number;
   paymentStatus: PaymentStatus;
-  status: StudentStatus;
+  paymentMethod: PaymentMethod; // Cash | UPI
+  status: StudentStatus; // "Active" | "Inactive" only
   remarks?: string;
   currentMonth: string;
   year: number;
@@ -31,10 +33,9 @@ export interface MembershipRecord extends AuditMetadata {
 }
 
 export const MEMBERSHIP_PLANS = [
-  "Annual Platinum Family (All Access)",
-  "Yearly Family Club Pack",
-  "Quarterly Family Pack",
-  "Monthly Gold Family",
-  "Annual Individual Elite",
-  "Monthly Individual Standard",
+  "1 Month",
+  "3 Months",
+  "6 Months",
 ] as const;
+
+export type MembershipPlanOption = typeof MEMBERSHIP_PLANS[number];

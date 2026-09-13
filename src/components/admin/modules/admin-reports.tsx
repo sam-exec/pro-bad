@@ -5,7 +5,7 @@ import {
   BarChart3,
   FileSpreadsheet,
   FileText,
-  DollarSign,
+  IndianRupee,
   Users,
   CreditCard,
   AlertCircle,
@@ -205,7 +205,7 @@ export function AdminReports({ selectedBranch }: AdminReportsProps) {
               Total Revenue
             </span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <DollarSign className="w-4 h-4" />
+              <IndianRupee className="w-4 h-4" />
             </div>
           </div>
           <p className="text-2xl font-extrabold text-slate-900">₹18,45,200</p>

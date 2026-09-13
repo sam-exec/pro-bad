@@ -61,7 +61,7 @@ export function MembershipDetailsDrawer({
                 <StatusBadge status={membership.status} />
               </div>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
-                {membership.membershipId} &bull; {totalMembers} {totalMembers === 1 ? "Member" : "Members"}
+                Serial No: #{membership.serialNumber} &bull; {totalMembers} {totalMembers === 1 ? "Member" : "Members"}
               </p>
             </div>
           </div>

@@ -363,7 +363,6 @@ export function MembershipFormModal({
                   className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-800"
                 >
                   <option value="Active">Active</option>
-                  <option value="Trial">Trial</option>
                   <option value="Inactive">Inactive</option>
                 </select>
               </div>

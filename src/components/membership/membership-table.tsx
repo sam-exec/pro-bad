@@ -45,7 +45,7 @@ export function MembershipTable({
           <table className="w-full border-collapse text-left">
             <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
               <tr>
-                <th className="px-3.5 py-3 whitespace-nowrap">Membership ID</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Primary Member Name</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Primary Mobile</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Membership Plan</th>
@@ -70,9 +70,9 @@ export function MembershipTable({
 
                 return (
                   <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
-                    {/* Membership ID */}
+                    {/* Serial Number */}
                     <td className="px-3.5 py-3 font-mono font-medium text-slate-900 whitespace-nowrap">
-                      {m.membershipId}
+                      #{m.serialNumber}
                     </td>
 
                     {/* Primary Member Name */}
@@ -203,7 +203,7 @@ export function MembershipTable({
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 font-mono mt-0.5">
-                      {m.membershipId} &bull; {m.membershipPlan}
+                      #{m.serialNumber} &bull; {m.membershipPlan}
                     </p>
                   </div>
                   <StatusBadge status={m.status} />

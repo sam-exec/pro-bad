@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, User, DollarSign, Calendar, Info } from "lucide-react";
+import { X, User, IndianRupee, Calendar, Info } from "lucide-react";
 import {
   Student,
   StudentFormData,
@@ -10,6 +10,7 @@ import {
   MONTHS,
   Gender,
   StudentStatus,
+  PaymentMethod,
 } from "@/types/kids-coaching";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ export function StudentFormModal({
   const [currentMonth, setCurrentMonth] = useState<string>("March");
   const [year, setYear] = useState<number>(2026);
   const [status, setStatus] = useState<StudentStatus>("Active");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
   const [remarks, setRemarks] = useState("");
 
   const [errors, setErrors] = useState<{
@@ -70,6 +72,7 @@ export function StudentFormModal({
       setCurrentMonth(studentToEdit.currentMonth);
       setYear(studentToEdit.year);
       setStatus(studentToEdit.status);
+      setPaymentMethod(studentToEdit.paymentMethod || "UPI");
       setRemarks(studentToEdit.remarks || "");
     } else {
       setStudentName("");
@@ -85,6 +88,7 @@ export function StudentFormModal({
       setCurrentMonth("March");
       setYear(2026);
       setStatus("Active");
+      setPaymentMethod("UPI");
       setRemarks("");
     }
     setErrors({});
@@ -131,6 +135,7 @@ export function StudentFormModal({
       coach,
       monthlyFee: Number(monthlyFee),
       amountPaid: Number(amountPaid),
+      paymentMethod,
       currentMonth,
       year: Number(year),
       status,
@@ -335,7 +340,7 @@ export function StudentFormModal({
               </div>
 
               {/* Status */}
-              <div className="space-y-1 sm:col-span-2">
+              <div className="space-y-1">
                 <Label htmlFor="status" required>
                   Enrollment Status
                 </Label>
@@ -346,8 +351,23 @@ export function StudentFormModal({
                   className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
                 >
                   <option value="Active">Active</option>
-                  <option value="Trial">Trial</option>
                   <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+
+              {/* Payment Method */}
+              <div className="space-y-1">
+                <Label htmlFor="paymentMethod" required>
+                  Payment Method
+                </Label>
+                <select
+                  id="paymentMethod"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                  className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+                >
+                  <option value="UPI">UPI</option>
+                  <option value="Cash">Cash</option>
                 </select>
               </div>
             </div>
@@ -356,7 +376,7 @@ export function StudentFormModal({
           {/* Section: Fee & Billing */}
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
-              <DollarSign className="w-3.5 h-3.5 text-blue-600" />
+              <IndianRupee className="w-3.5 h-3.5 text-blue-600" />
               <span>Fee & Billing</span>
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
@@ -441,7 +461,7 @@ export function StudentFormModal({
               rows={2}
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              placeholder="e.g. Trial progress notes, discount approvals, or parent requests"
+              placeholder="e.g. Training progress notes, discount approvals, or parent requests"
               className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 resize-none shadow-xs"
             />
           </div>

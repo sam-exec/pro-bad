@@ -8,6 +8,7 @@ export const INITIAL_KIDS_1ON1_STUDENTS: Kids1on1Student[] = [
   // --- Nallagandla Branch Records ---
   {
     id: "kc1-1",
+    serialNumber: 1,
     recordId: "REC-KC1-001",
     studentId: "KC1-2026-001",
     studentName: "Devansh Rao",
@@ -25,6 +26,7 @@ export const INITIAL_KIDS_1ON1_STUDENTS: Kids1on1Student[] = [
     amountPaid: 360,
     dueAmount: 0,
     paymentStatus: "Paid",
+    paymentMethod: "UPI",
     joiningDate: "2026-01-12",
     month: "March",
     year: 2026,
@@ -41,6 +43,7 @@ export const INITIAL_KIDS_1ON1_STUDENTS: Kids1on1Student[] = [
   },
   {
     id: "kc1-2",
+    serialNumber: 2,
     recordId: "REC-KC1-002",
     studentId: "KC1-2026-002",
     studentName: "Meera Nair",
@@ -58,6 +61,7 @@ export const INITIAL_KIDS_1ON1_STUDENTS: Kids1on1Student[] = [
     amountPaid: 130,
     dueAmount: 130,
     paymentStatus: "Partial",
+    paymentMethod: "Cash",
     joiningDate: "2026-02-01",
     month: "March",
     year: 2026,
@@ -74,6 +78,7 @@ export const INITIAL_KIDS_1ON1_STUDENTS: Kids1on1Student[] = [
   },
   {
     id: "kc1-3",
+    serialNumber: 3,
     recordId: "REC-KC1-003",
     studentId: "KC1-2026-003",
     studentName: "Arjun Singhania",
@@ -91,6 +96,7 @@ export const INITIAL_KIDS_1ON1_STUDENTS: Kids1on1Student[] = [
     amountPaid: 480,
     dueAmount: 0,
     paymentStatus: "Paid",
+    paymentMethod: "UPI",
     joiningDate: "2026-01-05",
     month: "February",
     year: 2026,
@@ -109,6 +115,7 @@ export const INITIAL_KIDS_1ON1_STUDENTS: Kids1on1Student[] = [
   // --- Manikonda Branch Records ---
   {
     id: "kc1-4",
+    serialNumber: 4,
     recordId: "REC-KC1-004",
     studentId: "KC1-2026-004",
     studentName: "Tanay Varma",
@@ -126,10 +133,11 @@ export const INITIAL_KIDS_1ON1_STUDENTS: Kids1on1Student[] = [
     amountPaid: 0,
     dueAmount: 260,
     paymentStatus: "Pending",
+    paymentMethod: "UPI",
     joiningDate: "2026-02-20",
     month: "February",
     year: 2026,
-    status: "Trial",
+    status: "Active",
     remarks: "First assessment completed on Manikonda Court 2.",
     branchId: "branch-mnk",
     branchName: "Manikonda",
@@ -142,6 +150,7 @@ export const INITIAL_KIDS_1ON1_STUDENTS: Kids1on1Student[] = [
   },
   {
     id: "kc1-5",
+    serialNumber: 5,
     recordId: "REC-KC1-005",
     studentId: "KC1-2026-005",
     studentName: "Aditya Kulkarni",
@@ -159,6 +168,7 @@ export const INITIAL_KIDS_1ON1_STUDENTS: Kids1on1Student[] = [
     amountPaid: 360,
     dueAmount: 0,
     paymentStatus: "Paid",
+    paymentMethod: "Cash",
     joiningDate: "2026-01-02",
     month: "January",
     year: 2026,
@@ -179,6 +189,7 @@ export const INITIAL_ADULTS_COACHING_MEMBERS: AdultCoachMember[] = [
   // --- Nallagandla Branch Records ---
   {
     id: "ac-1",
+    serialNumber: 1,
     recordId: "REC-AC-001",
     memberId: "AC-2026-001",
     memberName: "Vikram Malhotra",
@@ -207,6 +218,7 @@ export const INITIAL_ADULTS_COACHING_MEMBERS: AdultCoachMember[] = [
   },
   {
     id: "ac-2",
+    serialNumber: 2,
     recordId: "REC-AC-002",
     memberId: "AC-2026-002",
     memberName: "Radhika Bannerjee",
@@ -235,6 +247,7 @@ export const INITIAL_ADULTS_COACHING_MEMBERS: AdultCoachMember[] = [
   },
   {
     id: "ac-3",
+    serialNumber: 3,
     recordId: "REC-AC-003",
     memberId: "AC-2026-003",
     memberName: "Deepak Chawla",
@@ -263,6 +276,7 @@ export const INITIAL_ADULTS_COACHING_MEMBERS: AdultCoachMember[] = [
   },
   {
     id: "ac-4",
+    serialNumber: 4,
     recordId: "REC-AC-004",
     memberId: "AC-2026-004",
     memberName: "Siddharth Sen",
@@ -293,6 +307,7 @@ export const INITIAL_ADULTS_COACHING_MEMBERS: AdultCoachMember[] = [
   // --- Manikonda Branch Records ---
   {
     id: "ac-5",
+    serialNumber: 5,
     recordId: "REC-AC-005",
     memberId: "AC-2026-005",
     memberName: "Anuradha Hegde",
@@ -308,8 +323,8 @@ export const INITIAL_ADULTS_COACHING_MEMBERS: AdultCoachMember[] = [
     paymentStatus: "Partial",
     currentMonth: "February",
     year: 2026,
-    status: "Trial",
-    remarks: "Weekend trial package at Manikonda.",
+    status: "Inactive",
+    remarks: "Weekend introductory package at Manikonda.",
     branchId: "branch-mnk",
     branchName: "Manikonda",
     employeeId: "MNK001",
@@ -321,6 +336,7 @@ export const INITIAL_ADULTS_COACHING_MEMBERS: AdultCoachMember[] = [
   },
   {
     id: "ac-6",
+    serialNumber: 6,
     recordId: "REC-AC-006",
     memberId: "AC-2026-006",
     memberName: "Kunal Deshmukh",
@@ -353,6 +369,7 @@ export const INITIAL_ADULTS_1ON1_MEMBERS: Adult1on1Member[] = [
   // --- Nallagandla Branch Records ---
   {
     id: "ac1-1",
+    serialNumber: 1,
     recordId: "REC-AC1-001",
     memberId: "AC1-2026-001",
     memberName: "Rajiv Menon",
@@ -385,6 +402,7 @@ export const INITIAL_ADULTS_1ON1_MEMBERS: Adult1on1Member[] = [
   },
   {
     id: "ac1-2",
+    serialNumber: 2,
     recordId: "REC-AC1-002",
     memberId: "AC1-2026-002",
     memberName: "Simran Kaur",
@@ -419,6 +437,7 @@ export const INITIAL_ADULTS_1ON1_MEMBERS: Adult1on1Member[] = [
   // --- Manikonda Branch Records ---
   {
     id: "ac1-3",
+    serialNumber: 3,
     recordId: "REC-AC1-003",
     memberId: "AC1-2026-003",
     memberName: "Amitabh Sen",
@@ -438,8 +457,8 @@ export const INITIAL_ADULTS_1ON1_MEMBERS: Adult1on1Member[] = [
     joiningDate: "2026-02-18",
     month: "February",
     year: 2026,
-    status: "Trial",
-    remarks: "Trial session completed; invoice raised at Manikonda.",
+    status: "Inactive",
+    remarks: "Assessment session completed; invoice raised at Manikonda.",
     branchId: "branch-mnk",
     branchName: "Manikonda",
     employeeId: "MNK001",
@@ -451,6 +470,7 @@ export const INITIAL_ADULTS_1ON1_MEMBERS: Adult1on1Member[] = [
   },
   {
     id: "ac1-4",
+    serialNumber: 4,
     recordId: "REC-AC1-004",
     memberId: "AC1-2026-004",
     memberName: "Tanvi Saxena",

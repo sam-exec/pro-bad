@@ -7,6 +7,7 @@ export const INITIAL_FLEXIBLE_MEMBERSHIPS: FlexibleMembershipRecord[] = [
   // --- Nallagandla Branch Records (NLG004 - Rahul Sharma) ---
   {
     id: "flx-1",
+    serialNumber: 1,
     recordId: "REC-FLX-001",
     flexibleMembershipId: "FLX-2026-001",
     primaryMemberName: "Sameer Varma",
@@ -41,6 +42,7 @@ export const INITIAL_FLEXIBLE_MEMBERSHIPS: FlexibleMembershipRecord[] = [
   },
   {
     id: "flx-2",
+    serialNumber: 2,
     recordId: "REC-FLX-002",
     flexibleMembershipId: "FLX-2026-002",
     primaryMemberName: "Karthik Sundaram",
@@ -82,6 +84,7 @@ export const INITIAL_FLEXIBLE_MEMBERSHIPS: FlexibleMembershipRecord[] = [
   },
   {
     id: "flx-3",
+    serialNumber: 3,
     recordId: "REC-FLX-003",
     flexibleMembershipId: "FLX-2026-003",
     primaryMemberName: "Alia Fernandes",
@@ -110,6 +113,7 @@ export const INITIAL_FLEXIBLE_MEMBERSHIPS: FlexibleMembershipRecord[] = [
   // --- Manikonda Branch Records (MNK001 - Vikram Reddy) ---
   {
     id: "flx-4",
+    serialNumber: 4,
     recordId: "REC-FLX-004",
     flexibleMembershipId: "FLX-2026-004",
     primaryMemberName: "Rameshwar Kulkarni",
@@ -144,6 +148,7 @@ export const INITIAL_FLEXIBLE_MEMBERSHIPS: FlexibleMembershipRecord[] = [
   },
   {
     id: "flx-5",
+    serialNumber: 5,
     recordId: "REC-FLX-005",
     flexibleMembershipId: "FLX-2026-005",
     primaryMemberName: "Nitin Mehra",
@@ -178,6 +183,7 @@ export const INITIAL_FLEXIBLE_MEMBERSHIPS: FlexibleMembershipRecord[] = [
   },
   {
     id: "flx-6",
+    serialNumber: 6,
     recordId: "REC-FLX-006",
     flexibleMembershipId: "FLX-2026-006",
     primaryMemberName: "Farhan Qureshi",

@@ -1,12 +1,14 @@
 export type PaymentStatus = "Paid" | "Partial" | "Pending";
-export type StudentStatus = "Active" | "Inactive" | "Trial";
+export type StudentStatus = "Active" | "Inactive";
+export type PaymentMethod = "Cash" | "UPI";
 export type Gender = "Male" | "Female" | "Other";
 
 import { ExcelRecordMeta } from "./excel";
 
 export interface Student extends ExcelRecordMeta {
   id: string;
-  studentId: string; // e.g. KC-2026-001
+  serialNumber: number; // Auto-generated, read-only sequential number (1, 2, 3...)
+  studentId?: string; // Kept optional for legacy Excel mapping
   studentName: string;
   parentName: string;
   mobileNumber: string;
@@ -19,9 +21,10 @@ export interface Student extends ExcelRecordMeta {
   amountPaid: number;
   dueAmount: number;
   paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod; // Cash | UPI
   currentMonth: string; // e.g. "January", "February", "March", etc.
   year: number;
-  status: StudentStatus;
+  status: StudentStatus; // "Active" | "Inactive" only
   remarks?: string;
 
   // Synchronization and audit metadata for Central Database & Master Excel Workbook
@@ -32,6 +35,7 @@ export type StudentFormData = Omit<
   Student,
   | "id"
   | "recordId"
+  | "serialNumber"
   | "studentId"
   | "dueAmount"
   | "paymentStatus"
@@ -46,6 +50,7 @@ export type StudentFormData = Omit<
 > & {
   id?: string;
   recordId?: string;
+  serialNumber?: number;
   studentId?: string;
 };
 

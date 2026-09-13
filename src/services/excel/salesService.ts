@@ -85,6 +85,7 @@ export class SalesService {
       SalesRecord,
       | "id"
       | "recordId"
+      | "invoiceNumber"
       | "branchId"
       | "branchName"
       | "employeeId"

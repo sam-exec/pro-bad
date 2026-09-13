@@ -47,7 +47,7 @@ export function StudentDetailsDrawer({
                 <StatusBadge status={student.status} />
               </div>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
-                {student.studentId}
+                #{student.serialNumber}
               </p>
             </div>
           </div>
@@ -72,9 +72,9 @@ export function StudentDetailsDrawer({
             </div>
             <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 text-xs">
               <div>
-                <span className="text-slate-400 font-medium">Student ID</span>
+                <span className="text-slate-400 font-medium">Serial Number</span>
                 <p className="font-semibold text-slate-800 font-mono mt-0.5">
-                  {student.studentId}
+                  #{student.serialNumber}
                 </p>
               </div>
               <div>
