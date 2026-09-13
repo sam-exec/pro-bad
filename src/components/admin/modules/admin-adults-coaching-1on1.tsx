@@ -21,8 +21,8 @@ interface AdminAdultsCoaching1on1Props {
 }
 
 const EXPORT_COLUMNS: ExportColumn<Adult1on1Member>[] = [
-  { header: "Member ID", key: "memberId" },
-  { header: "Player Name", key: "memberName" },
+  { header: "Serial No", key: "serialNumber", formatter: (r) => `#${r.serialNumber ?? ""}` },
+  { header: "Member Name", key: "memberName" },
   { header: "Mobile", key: "mobileNumber" },
   { header: "Age", key: "age" },
   { header: "Gender", key: "gender" },
@@ -334,7 +334,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                       className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Member ID</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Player Name</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mobile</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Age/Gender</th>
@@ -370,7 +370,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        {m.memberId}
+                        #{m.serialNumber}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {m.memberName}

@@ -21,7 +21,7 @@ interface AdminKidsCoachingProps {
 }
 
 const EXPORT_COLUMNS: ExportColumn<Student>[] = [
-  { header: "Student ID", key: "studentId" },
+  { header: "Serial No", key: "serialNumber", formatter: (r) => `#${r.serialNumber ?? ""}` },
   { header: "Student Name", key: "studentName" },
   { header: "Parent Name", key: "parentName" },
   { header: "Mobile Number", key: "mobileNumber" },
@@ -270,7 +270,7 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
                       title="Select All Records"
                     />
                   </th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Student ID</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Student Name</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Parent Name</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mobile</th>
@@ -306,7 +306,7 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        {student.studentId}
+                        #{student.serialNumber}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {student.studentName}

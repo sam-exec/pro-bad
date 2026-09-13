@@ -8,6 +8,7 @@ export const INITIAL_SUPER_MOMS_RECORDS: SuperMomsRecord[] = [
   // --- Nallagandla Branch Records ---
   {
     id: "sm-nlg-1",
+    serialNumber: 1,
     recordId: "sm-nlg-1",
     memberId: "SM-2026-001",
     memberName: "Anuradha Desai",
@@ -30,6 +31,7 @@ export const INITIAL_SUPER_MOMS_RECORDS: SuperMomsRecord[] = [
   },
   {
     id: "sm-nlg-2",
+    serialNumber: 2,
     recordId: "sm-nlg-2",
     memberId: "SM-2026-002",
     memberName: "Sneha Reddy",
@@ -52,6 +54,7 @@ export const INITIAL_SUPER_MOMS_RECORDS: SuperMomsRecord[] = [
   },
   {
     id: "sm-nlg-3",
+    serialNumber: 3,
     recordId: "sm-nlg-3",
     memberId: "SM-2026-003",
     memberName: "Pooja Hegde",
@@ -76,6 +79,7 @@ export const INITIAL_SUPER_MOMS_RECORDS: SuperMomsRecord[] = [
   // --- Manikonda Branch Records ---
   {
     id: "sm-mnk-1",
+    serialNumber: 4,
     recordId: "sm-mnk-1",
     memberId: "SM-2026-101",
     memberName: "Lakshmi Narayanan",
@@ -98,6 +102,7 @@ export const INITIAL_SUPER_MOMS_RECORDS: SuperMomsRecord[] = [
   },
   {
     id: "sm-mnk-2",
+    serialNumber: 5,
     recordId: "sm-mnk-2",
     memberId: "SM-2026-102",
     memberName: "Divya Teja",

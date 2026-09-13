@@ -32,7 +32,8 @@ export interface SalesRecord extends ExcelRecordMeta {
  */
 export interface SuperMomsRecord extends ExcelRecordMeta {
   id: string; // Identifier (maps to recordId)
-  memberId: string;
+  serialNumber?: number;
+  memberId?: string;
   memberName: string;
   mobileNumber: string;
   batch: string;

@@ -25,7 +25,7 @@ const SUPER_MOMS_BATCHES = [
 ];
 
 const EXPORT_COLUMNS: ExportColumn<SuperMomsRecord>[] = [
-  { header: "Member ID", key: "memberId" },
+  { header: "Serial No", key: "serialNumber", formatter: (r) => `#${r.serialNumber ?? ""}` },
   { header: "Member Name", key: "memberName" },
   { header: "Mobile Number", key: "mobileNumber" },
   { header: "Branch", key: "branchName", formatter: (r) => r.branchName || "Nallagandla" },
@@ -299,7 +299,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                       className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Member ID</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mother Name</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mobile Number</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Branch</th>
@@ -332,7 +332,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        {r.memberId}
+                        #{r.serialNumber}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {r.memberName}

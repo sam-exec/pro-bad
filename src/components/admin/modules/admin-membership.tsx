@@ -20,7 +20,7 @@ interface AdminMembershipProps {
 }
 
 const EXPORT_COLUMNS: ExportColumn<MembershipRecord>[] = [
-  { header: "Membership ID", key: "membershipId" },
+  { header: "Serial No", key: "serialNumber", formatter: (r) => `#${r.serialNumber ?? ""}` },
   { header: "Primary Member", key: "primaryMemberName" },
   { header: "Mobile", key: "primaryMobileNumber" },
   { header: "Email", key: "email" },
@@ -257,17 +257,18 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
                       className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Plan ID</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Primary Member</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mobile</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Branch</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Plan Tier</th>
-                  <th className="px-3.5 py-3 text-center whitespace-nowrap">Linked Members</th>
-                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Monthly Fee</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Plan Details</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Additional Members</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Fee</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Paid</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Due</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Payment</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Joining Date</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap sticky right-0 bg-slate-50">Actions</th>
                 </tr>
               </thead>
@@ -290,7 +291,7 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        {r.membershipId}
+                        #{r.serialNumber}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {r.primaryMemberName}

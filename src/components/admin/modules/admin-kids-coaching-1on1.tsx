@@ -16,7 +16,7 @@ import {
   SESSION_PACKAGES,
   TIMING_SLOTS_1ON1,
 } from "@/types/coaching-modules";
-import { COACHES, Gender, StudentStatus, PaymentStatus } from "@/types/kids-coaching";
+import { COACHES, Gender, StudentStatus, PaymentStatus, PaymentMethod } from "@/types/kids-coaching";
 import { kidsService } from "@/services/excel";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
@@ -34,7 +34,7 @@ interface AdminKidsCoaching1on1Props {
 }
 
 const EXPORT_COLUMNS: ExportColumn<Kids1on1Student>[] = [
-  { header: "Student ID", key: "studentId" },
+  { header: "Serial No", key: "serialNumber", formatter: (r) => `#${r.serialNumber ?? ""}` },
   { header: "Student Name", key: "studentName" },
   { header: "Parent Name", key: "parentName" },
   { header: "Mobile", key: "parentMobile" },
@@ -82,6 +82,7 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
     feeAmount: 320,
     amountPaid: 320,
     paymentStatus: "Paid" as PaymentStatus,
+    paymentMethod: "UPI" as PaymentMethod,
     joiningDate: "2026-03-01",
     status: "Active" as StudentStatus,
   });
@@ -157,6 +158,7 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
       feeAmount: 320,
       amountPaid: 320,
       paymentStatus: "Paid",
+      paymentMethod: "UPI",
       joiningDate: new Date().toISOString().split("T")[0],
       status: "Active",
     });
@@ -178,6 +180,7 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
       feeAmount: s.feeAmount,
       amountPaid: s.amountPaid,
       paymentStatus: s.paymentStatus,
+      paymentMethod: s.paymentMethod || "UPI",
       joiningDate: s.joiningDate,
       status: s.status,
     });
@@ -348,7 +351,7 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
                       className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Student ID</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Student Name</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Parent Details</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Branch</th>
@@ -383,7 +386,7 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        {s.studentId}
+                        #{s.serialNumber}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {s.studentName} ({s.age}y, {s.gender})
@@ -620,6 +623,20 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
                     />
                   </div>
                   <div>
+                    <Label className="text-xs">Payment Method</Label>
+                    <select
+                      value={formData.paymentMethod}
+                      onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value as PaymentMethod })}
+                      className="w-full h-9 mt-1 rounded-lg border border-slate-200 px-2.5 text-xs"
+                    >
+                      <option value="UPI">UPI</option>
+                      <option value="Cash">Cash</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
                     <Label className="text-xs">Status</Label>
                     <select
                       value={formData.status}
@@ -628,7 +645,6 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
                     >
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
-                      <option value="On Hold">On Hold</option>
                     </select>
                   </div>
                 </div>

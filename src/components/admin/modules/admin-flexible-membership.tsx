@@ -19,7 +19,7 @@ interface AdminFlexibleMembershipProps {
 }
 
 const EXPORT_COLUMNS: ExportColumn<FlexibleMembershipRecord>[] = [
-  { header: "Flexible ID", key: "flexibleMembershipId" },
+  { header: "Serial No", key: "serialNumber", formatter: (r) => `#${r.serialNumber ?? ""}` },
   { header: "Primary Member", key: "primaryMemberName" },
   { header: "Mobile Number", key: "primaryMobileNumber" },
   { header: "Email", key: "email" },
@@ -251,7 +251,7 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
                       className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                   </th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Pass ID</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Primary Member</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mobile</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Branch</th>
@@ -282,7 +282,7 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        {r.flexibleMembershipId}
+                        #{r.serialNumber}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {r.primaryMemberName}
