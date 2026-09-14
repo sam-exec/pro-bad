@@ -6,6 +6,9 @@ import {
   SaleTransaction,
   SalesDateFilter,
 } from "@/types/sales";
+import { PaymentMethod } from "@/types/payment";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { salesManagementService } from "@/services/salesManagementService";
 import { BRANCHES } from "@/config/branches";
 import {
@@ -49,6 +52,7 @@ export function AdminSalesModule({ selectedBranch }: AdminSalesModuleProps) {
   const [branchFilter, setBranchFilter] = useState<string>(selectedBranch);
   const [employeeFilter, setEmployeeFilter] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
   const [dateFilter, setDateFilter] = useState<SalesDateFilter>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -75,6 +79,7 @@ export function AdminSalesModule({ selectedBranch }: AdminSalesModuleProps) {
       branchId: branchFilter,
       employeeId: employeeFilter,
       product: productFilter,
+      paymentMethod: paymentMethodFilter,
       dateFilter,
       startDate,
       endDate,
@@ -84,6 +89,7 @@ export function AdminSalesModule({ selectedBranch }: AdminSalesModuleProps) {
     branchFilter,
     employeeFilter,
     productFilter,
+    paymentMethodFilter,
     dateFilter,
     startDate,
     endDate,
@@ -672,7 +678,7 @@ export function AdminSalesModule({ selectedBranch }: AdminSalesModuleProps) {
 
       {/* 3. ADMIN FILTERS BAR */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-center">
           {/* Search Query */}
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -731,6 +737,14 @@ export function AdminSalesModule({ selectedBranch }: AdminSalesModuleProps) {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Payment Method Filter */}
+          <div>
+            <PaymentMethodFilter
+              value={paymentMethodFilter}
+              onChange={setPaymentMethodFilter}
+            />
           </div>
 
           {/* Date Filter */}
@@ -833,17 +847,7 @@ export function AdminSalesModule({ selectedBranch }: AdminSalesModuleProps) {
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
-                        <span
-                          className={cn(
-                            "px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1",
-                            s.paymentMethod === "UPI"
-                              ? "bg-purple-50 text-purple-700 border border-purple-200"
-                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          )}
-                        >
-                          {s.paymentMethod === "UPI" ? <QrCode className="w-3 h-3" /> : <Banknote className="w-3 h-3" />}
-                          {s.paymentMethod}
-                        </span>
+                        <PaymentMethodBadge method={s.paymentMethod} />
                       </td>
                       <td className="py-3.5 px-4 text-right font-black text-slate-900 font-mono text-sm">
                         ₹{s.grandTotal.toFixed(2)}

@@ -15,6 +15,7 @@ import { FlexibleMembershipTable } from "./flexible-membership-table";
 import { FlexibleMembershipDrawer } from "./flexible-membership-drawer";
 import { FlexibleMembershipModal } from "./flexible-membership-modal";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { Button } from "@/components/ui/button";
 import { useBranch } from "@/context/branch-context";
 
@@ -26,6 +27,7 @@ export function FlexibleMembershipModule() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [expiryFilter, setExpiryFilter] = useState<string>("All");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("All");
 
   // Drawer and Modal States
   const [viewingMembership, setViewingMembership] =
@@ -70,9 +72,14 @@ export function FlexibleMembershipModule() {
         }
       }
 
+      // 4. Payment Method Filter
+      if (paymentMethodFilter !== "All" && m.paymentMethod !== paymentMethodFilter) {
+        return false;
+      }
+
       return true;
     });
-  }, [memberships, currentBranch.id, searchQuery, statusFilter, expiryFilter]);
+  }, [memberships, currentBranch.id, searchQuery, statusFilter, expiryFilter, paymentMethodFilter]);
 
   // Save / Update Handler
   const handleSave = async (
@@ -112,7 +119,11 @@ export function FlexibleMembershipModule() {
           totalHours: totalH,
           hoursUsed: usedH,
           hoursRemaining: remainingH,
+          planFee: data.planFee || 450,
           amountPaid: data.amountPaid || 450,
+          dueAmount: data.dueAmount ?? Math.max(0, (data.planFee || 450) - (data.amountPaid || 450)),
+          paymentMethod: data.paymentMethod || "Cash",
+          paymentStatus: data.paymentStatus || "Paid",
           status: computedStatus,
           remarks: data.remarks,
           additionalMembers: data.additionalMembers || [],
@@ -209,6 +220,12 @@ export function FlexibleMembershipModule() {
             </div>
           </div>
 
+          {/* Payment Method Filter */}
+          <PaymentMethodFilter
+            value={paymentMethodFilter}
+            onChange={setPaymentMethodFilter}
+          />
+
           <Button
             onClick={() => {
               setMembershipToEdit(null);
@@ -223,7 +240,7 @@ export function FlexibleMembershipModule() {
       </div>
 
       {/* Filter Reset if active */}
-      {(searchQuery || statusFilter !== "All" || expiryFilter !== "All") && (
+      {(searchQuery || statusFilter !== "All" || expiryFilter !== "All" || paymentMethodFilter !== "All") && (
         <div className="flex items-center justify-between px-1 text-xs text-slate-500">
           <div className="flex items-center gap-2">
             <span>Active filters:</span>
@@ -242,6 +259,11 @@ export function FlexibleMembershipModule() {
                 Expiry: {expiryFilter}
               </span>
             )}
+            {paymentMethodFilter !== "All" && (
+              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-medium">
+                Payment: {paymentMethodFilter}
+              </span>
+            )}
           </div>
           <button
             type="button"
@@ -249,6 +271,7 @@ export function FlexibleMembershipModule() {
               setSearchQuery("");
               setStatusFilter("All");
               setExpiryFilter("All");
+              setPaymentMethodFilter("All");
             }}
             className="text-blue-600 hover:underline font-medium cursor-pointer"
           >

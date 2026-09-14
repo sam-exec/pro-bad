@@ -351,6 +351,10 @@ class SalesManagementService {
       );
     }
 
+    if (options.paymentMethod && options.paymentMethod !== "all") {
+      result = result.filter((s) => s.paymentMethod === options.paymentMethod);
+    }
+
     if (options.searchQuery && options.searchQuery.trim()) {
       const q = options.searchQuery.trim().toLowerCase();
       result = result.filter(

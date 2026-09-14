@@ -3,6 +3,7 @@ import { Eye, Edit2 } from "lucide-react";
 import { Student } from "@/types/kids-coaching";
 import { StatusBadge } from "./status-badge";
 import { PaymentBadge } from "./payment-badge";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 
 interface StudentRowProps {
   student: Student;
@@ -73,12 +74,17 @@ export function StudentRow({ student, onView, onEdit }: StudentRowProps) {
         ₹{student.dueAmount}
       </td>
 
-      {/* 13. Payment Status */}
+      {/* 13. Payment Method */}
+      <td className="px-3.5 py-3 whitespace-nowrap">
+        <PaymentMethodBadge method={student.paymentMethod} />
+      </td>
+
+      {/* 14. Payment Status */}
       <td className="px-3.5 py-3 whitespace-nowrap">
         <PaymentBadge status={student.paymentStatus} />
       </td>
 
-      {/* 14. Current Month */}
+      {/* 15. Current Month */}
       <td className="px-3.5 py-3 whitespace-nowrap text-slate-600">
         {student.currentMonth} {student.year}
       </td>

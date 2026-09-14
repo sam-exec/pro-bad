@@ -28,6 +28,8 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 
 interface LineItemFormState {
   product: string;
@@ -74,6 +76,7 @@ export function EmployeeSalesModule() {
   const [historyDateFilter, setHistoryDateFilter] = useState<SalesDateFilter>("all");
   const [historyStartDate, setHistoryStartDate] = useState("");
   const [historyEndDate, setHistoryEndDate] = useState("");
+  const [historyPaymentMethod, setHistoryPaymentMethod] = useState<string>("All");
 
   // Report Filter States
   const [reportDateFilter, setReportDateFilter] = useState<SalesDateFilter>("month");
@@ -193,6 +196,7 @@ export function EmployeeSalesModule() {
       dateFilter: historyDateFilter,
       startDate: historyStartDate,
       endDate: historyEndDate,
+      paymentMethod: historyPaymentMethod as any,
     });
   }, [
     employeeId,
@@ -200,6 +204,7 @@ export function EmployeeSalesModule() {
     historyDateFilter,
     historyStartDate,
     historyEndDate,
+    historyPaymentMethod,
     updateTrigger,
   ]);
 
@@ -803,6 +808,11 @@ export function EmployeeSalesModule() {
                   />
                 </div>
               )}
+
+              <PaymentMethodFilter
+                selectedMethod={historyPaymentMethod}
+                onMethodChange={setHistoryPaymentMethod}
+              />
             </div>
           </div>
 
@@ -817,7 +827,7 @@ export function EmployeeSalesModule() {
                     <th className="py-3 px-4">Customer Name</th>
                     <th className="py-3 px-4">Customer Phone</th>
                     <th className="py-3 px-4">Products Sold</th>
-                    <th className="py-3 px-4">Payment</th>
+                    <th className="py-3 px-4">Payment Method</th>
                     <th className="py-3 px-4 text-right">Grand Total</th>
                   </tr>
                 </thead>
@@ -864,17 +874,7 @@ export function EmployeeSalesModule() {
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span
-                            className={cn(
-                              "px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1",
-                              s.paymentMethod === "UPI"
-                                ? "bg-purple-50 text-purple-700 border border-purple-200"
-                                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            )}
-                          >
-                            {s.paymentMethod === "UPI" ? <QrCode className="w-3 h-3" /> : <Banknote className="w-3 h-3" />}
-                            {s.paymentMethod}
-                          </span>
+                          <PaymentMethodBadge method={s.paymentMethod} />
                         </td>
                         <td className="py-3 px-4 text-right font-black text-slate-900 font-mono text-sm">
                           ₹{s.grandTotal.toFixed(2)}

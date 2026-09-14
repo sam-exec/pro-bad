@@ -18,6 +18,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PaymentMethod } from "@/types/payment";
 
 interface POSCartProps {
   cart: CartItem[];
@@ -47,9 +48,7 @@ export function POSCart({
   const [customerMobile, setCustomerMobile] = useState("");
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [taxEnabled, setTaxEnabled] = useState<boolean>(true);
-  const [paymentMethod, setPaymentMethod] = useState<
-    "UPI" | "Cash" | "Card" | "NetBanking"
-  >("UPI");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -272,28 +271,26 @@ export function POSCart({
           <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
             Payment Mode:
           </label>
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-2 gap-2">
             {[
-              { id: "UPI", label: "UPI", icon: QrCode },
               { id: "Cash", label: "Cash", icon: Banknote },
-              { id: "Card", label: "Card", icon: CreditCard },
-              { id: "NetBanking", label: "NetBank", icon: Building },
+              { id: "UPI", label: "UPI", icon: QrCode },
             ].map(({ id, label, icon: Icon }) => {
               const isSelected = paymentMethod === id;
               return (
                 <button
                   key={id}
                   type="button"
-                  onClick={() => setPaymentMethod(id as any)}
+                  onClick={() => setPaymentMethod(id as PaymentMethod)}
                   className={cn(
-                    "flex flex-col items-center justify-center p-2 rounded-lg border text-center transition-all cursor-pointer",
+                    "flex items-center justify-center gap-1.5 p-2 rounded-lg border text-center transition-all cursor-pointer",
                     isSelected
                       ? "bg-slate-900 text-white border-slate-900 shadow-xs"
                       : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
                   )}
                 >
-                  <Icon className="w-3.5 h-3.5 mb-1" />
-                  <span className="text-[10px] font-bold">{label}</span>
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="text-xs font-bold">{label}</span>
                 </button>
               );
             })}

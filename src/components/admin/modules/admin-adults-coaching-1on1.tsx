@@ -4,6 +4,9 @@ import React, { useState, useMemo } from "react";
 import { Plus, Users, Medal, DollarSign, Calendar, Eye, Edit2, X } from "lucide-react";
 import { Adult1on1Member, SESSION_PACKAGES, TIMING_SLOTS_1ON1 } from "@/types/coaching-modules";
 import { COACHES, Gender, StudentStatus, PaymentStatus } from "@/types/kids-coaching";
+import { PaymentMethod } from "@/types/payment";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { adultsService } from "@/services/excel";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
@@ -35,6 +38,7 @@ const EXPORT_COLUMNS: ExportColumn<Adult1on1Member>[] = [
   { header: "Total Fee", key: "feeAmount", formatter: (r) => `₹${r.feeAmount}` },
   { header: "Amount Paid", key: "paidAmount", formatter: (r) => `₹${r.paidAmount}` },
   { header: "Due Amount", key: "dueAmount", formatter: (r) => `₹${r.dueAmount}` },
+  { header: "Payment Method", key: "paymentMethod" },
   { header: "Payment Status", key: "paymentStatus" },
   { header: "Status", key: "status" },
   { header: "Joining Date", key: "joiningDate" },
@@ -47,6 +51,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Drawer & Modal
@@ -66,6 +71,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
     feeAmount: 350,
     paidAmount: 350,
     paymentStatus: "Paid" as PaymentStatus,
+    paymentMethod: "UPI" as PaymentMethod,
     joiningDate: "2026-03-01",
     status: "Active" as StudentStatus,
   });
@@ -86,9 +92,12 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
       if (m.year !== selectedYear) {
         return false;
       }
+      if (paymentMethodFilter !== "all" && m.paymentMethod !== paymentMethodFilter) {
+        return false;
+      }
       return true;
     });
-  }, [members, selectedBranch, searchQuery, selectedMonth, selectedYear]);
+  }, [members, selectedBranch, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
   const selectedMembers = useMemo(() => {
     return members.filter((m) => selectedIds.includes(m.id));
@@ -136,6 +145,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
       feeAmount: 350,
       paidAmount: 350,
       paymentStatus: "Paid",
+      paymentMethod: "UPI",
       joiningDate: new Date().toISOString().split("T")[0],
       status: "Active",
     });
@@ -156,6 +166,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
       feeAmount: m.feeAmount,
       paidAmount: m.paidAmount,
       paymentStatus: m.paymentStatus,
+      paymentMethod: m.paymentMethod || "UPI",
       joiningDate: m.joiningDate,
       status: m.status,
     });
@@ -303,14 +314,20 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
         <SearchBar
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by mobile number..."
+          placeholder="Search by player mobile number..."
         />
-        <MonthFilter
-          selectedMonth={selectedMonth}
-          onMonthChange={setSelectedMonth}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-        />
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <PaymentMethodFilter
+            value={paymentMethodFilter}
+            onChange={setPaymentMethodFilter}
+          />
+          <MonthFilter
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -346,7 +363,8 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Fee</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Paid</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Due</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Payment</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap sticky right-0 bg-slate-50">Actions</th>
                 </tr>
@@ -407,6 +425,9 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                       </td>
                       <td className="px-3.5 py-3 text-right font-semibold text-rose-600 whitespace-nowrap">
                         ₹{m.dueAmount}
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <PaymentMethodBadge method={m.paymentMethod} />
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         <PaymentBadge status={m.paymentStatus} />
@@ -482,6 +503,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                 <div className="flex justify-between"><span className="text-slate-500">Total Fee:</span><span className="font-semibold text-slate-800">₹{viewingMember.feeAmount}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Paid:</span><span className="font-semibold text-emerald-600">₹{viewingMember.paidAmount}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Due:</span><span className="font-semibold text-rose-600">₹{viewingMember.dueAmount}</span></div>
+                <div className="flex justify-between items-center"><span className="text-slate-500">Payment Method:</span><PaymentMethodBadge method={viewingMember.paymentMethod} /></div>
                 <div className="flex justify-between"><span className="text-slate-500">Joining Date:</span><span className="font-semibold text-slate-800">{viewingMember.joiningDate}</span></div>
               </div>
             </div>
@@ -600,6 +622,17 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                       }}
                       className="h-9 mt-1 text-xs"
                     />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Payment Method</Label>
+                    <select
+                      value={formData.paymentMethod}
+                      onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value as PaymentMethod })}
+                      className="w-full h-9 mt-1 rounded-lg border border-slate-200 px-2.5 text-xs bg-white"
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="UPI">UPI</option>
+                    </select>
                   </div>
                 </div>
 

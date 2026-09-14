@@ -15,6 +15,9 @@ import {
   ADULT_BATCHES,
 } from "@/types/coaching-modules";
 import { COACHES, MONTHS, YEARS, Gender, StudentStatus } from "@/types/kids-coaching";
+import { PaymentMethod } from "@/types/payment";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { adultsService } from "@/services/excel";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
@@ -50,6 +53,8 @@ export function AdultsCoachingModule() {
   const [coach, setCoach] = useState<string>(COACHES[0]);
   const [monthlyFee, setMonthlyFee] = useState<number>(200);
   const [paidAmount, setPaidAmount] = useState<number>(200);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
   const [currentMonth, setCurrentMonth] = useState<string>("March");
   const [status, setStatus] = useState<StudentStatus>("Active");
   const [remarks, setRemarks] = useState("");
@@ -66,6 +71,7 @@ export function AdultsCoachingModule() {
       setCoach(memberToEdit.coach);
       setMonthlyFee(memberToEdit.monthlyFee);
       setPaidAmount(memberToEdit.paidAmount);
+      setPaymentMethod(memberToEdit.paymentMethod || "UPI");
       setCurrentMonth(memberToEdit.currentMonth);
       setStatus(memberToEdit.status);
       setRemarks(memberToEdit.remarks || "");
@@ -79,6 +85,7 @@ export function AdultsCoachingModule() {
       setCoach(COACHES[0]);
       setMonthlyFee(200);
       setPaidAmount(200);
+      setPaymentMethod("UPI");
       setCurrentMonth("March");
       setStatus("Active");
       setRemarks("");
@@ -97,9 +104,10 @@ export function AdultsCoachingModule() {
       }
       if (selectedMonth !== "All" && m.currentMonth !== selectedMonth) return false;
       if (m.year !== selectedYear) return false;
+      if (paymentMethodFilter !== "all" && m.paymentMethod !== paymentMethodFilter) return false;
       return true;
     });
-  }, [members, currentBranch.id, searchQuery, selectedMonth, selectedYear]);
+  }, [members, currentBranch.id, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
   // Save / Edit Handler
   const handleSave = async (e: React.FormEvent) => {
@@ -112,6 +120,9 @@ export function AdultsCoachingModule() {
     }
     if (age <= 16) newErrors.age = "Adult members must be 16+.";
     if (monthlyFee < 0) newErrors.monthlyFee = "Fee cannot be negative.";
+    if (paidAmount > 0 && !paymentMethod) {
+      newErrors.paymentMethod = "Payment method is required when paid amount > 0.";
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -142,6 +153,7 @@ export function AdultsCoachingModule() {
           paidAmount: Number(paidAmount),
           dueAmount,
           paymentStatus,
+          paymentMethod,
           currentMonth,
           status,
           remarks: remarks.trim(),
@@ -169,6 +181,7 @@ export function AdultsCoachingModule() {
           paidAmount: Number(paidAmount),
           dueAmount,
           paymentStatus,
+          paymentMethod,
           currentMonth,
           year: 2026,
           status,
@@ -223,6 +236,10 @@ export function AdultsCoachingModule() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <PaymentMethodFilter
+            value={paymentMethodFilter}
+            onChange={setPaymentMethodFilter}
+          />
           <MonthFilter
             selectedMonth={selectedMonth}
             onMonthChange={setSelectedMonth}
@@ -237,7 +254,7 @@ export function AdultsCoachingModule() {
             className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold h-10 px-4 rounded-xl shadow-xs shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Member</span>
+            <span>Add Adult Member</span>
           </Button>
         </div>
       </div>
@@ -282,7 +299,8 @@ export function AdultsCoachingModule() {
                     <th className="px-3.5 py-3 text-right whitespace-nowrap">Monthly Fee</th>
                     <th className="px-3.5 py-3 text-right whitespace-nowrap">Paid Amount</th>
                     <th className="px-3.5 py-3 text-right whitespace-nowrap">Due Amount</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Payment</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
                     <th className="px-3.5 py-3 whitespace-nowrap">Month</th>
                     <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
                     <th className="px-3.5 py-3 whitespace-nowrap">Last Updated</th>
@@ -326,6 +344,9 @@ export function AdultsCoachingModule() {
                       </td>
                       <td className="px-3.5 py-3 text-right font-semibold text-rose-600 whitespace-nowrap">
                         ₹{m.dueAmount}
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <PaymentMethodBadge method={m.paymentMethod} />
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         <PaymentBadge status={m.paymentStatus} />
@@ -512,7 +533,11 @@ export function AdultsCoachingModule() {
                     <span className="text-slate-400">Due</span>
                     <p className="text-base font-bold text-rose-600 mt-1">₹{viewingMember.dueAmount}</p>
                   </div>
-                  <div className="col-span-3 pt-2 flex items-center justify-between">
+                  <div className="col-span-3 pt-2 flex items-center justify-between border-t border-slate-200/60">
+                    <span className="text-slate-500">Method:</span>
+                    <PaymentMethodBadge method={viewingMember.paymentMethod} />
+                  </div>
+                  <div className="col-span-3 pt-1 flex items-center justify-between">
                     <span className="text-slate-500">Status:</span>
                     <PaymentBadge status={viewingMember.paymentStatus} />
                   </div>
@@ -678,6 +703,19 @@ export function AdultsCoachingModule() {
                     value={paidAmount}
                     onChange={(e) => setPaidAmount(Number(e.target.value))}
                   />
+                </div>
+                <div>
+                  <Label htmlFor="paymentMethod" required={paidAmount > 0}>Payment Method</Label>
+                  <select
+                    id="paymentMethod"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm bg-white"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                  </select>
+                  {errors.paymentMethod && <p className="text-xs text-red-600">{errors.paymentMethod}</p>}
                 </div>
                 <div className="sm:col-span-2">
                   <Label htmlFor="mStatus" required>Status</Label>

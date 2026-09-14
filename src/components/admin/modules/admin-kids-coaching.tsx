@@ -10,6 +10,9 @@ import { StudentDetailsDrawer } from "@/components/kids-coaching/student-details
 import { StudentFormModal } from "@/components/kids-coaching/student-form-modal";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
 import { PaymentBadge } from "@/components/kids-coaching/payment-badge";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
+import { PaymentMethod } from "@/types/payment";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExportDropdown } from "@/components/admin/common/export-dropdown";
@@ -33,6 +36,7 @@ const EXPORT_COLUMNS: ExportColumn<Student>[] = [
   { header: "Monthly Fee", key: "monthlyFee", formatter: (r) => `₹${r.monthlyFee}` },
   { header: "Amount Paid", key: "amountPaid", formatter: (r) => `₹${r.amountPaid}` },
   { header: "Due Amount", key: "dueAmount", formatter: (r) => `₹${r.dueAmount}` },
+  { header: "Payment Method", key: "paymentMethod" },
   { header: "Payment Status", key: "paymentStatus" },
   { header: "Month", key: "currentMonth", formatter: (r) => `${r.currentMonth} ${r.year}` },
   { header: "Status", key: "status" },
@@ -44,6 +48,7 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Modal & Drawer states
@@ -51,7 +56,7 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
 
-  // Filtered Students (Branch Filtering + Phone Search + Month/Year)
+  // Filtered Students (Branch Filtering + Phone Search + Month/Year + Payment Method)
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
       // Branch filter: if not "all", match selectedBranch
@@ -78,9 +83,14 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
         return false;
       }
 
+      // Filter by Payment Method
+      if (paymentMethodFilter !== "all" && student.paymentMethod !== paymentMethodFilter) {
+        return false;
+      }
+
       return true;
     });
-  }, [students, selectedBranch, searchQuery, selectedMonth, selectedYear]);
+  }, [students, selectedBranch, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
   // Selected students list for export
   const selectedStudents = useMemo(() => {
@@ -237,12 +247,18 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
           onChange={setSearchQuery}
           placeholder="Search by student mobile number..."
         />
-        <MonthFilter
-          selectedMonth={selectedMonth}
-          onMonthChange={setSelectedMonth}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-        />
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <PaymentMethodFilter
+            value={paymentMethodFilter}
+            onChange={setPaymentMethodFilter}
+          />
+          <MonthFilter
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
+          />
+        </div>
       </div>
 
       {/* Interactive Table with Checkboxes */}
@@ -281,7 +297,8 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Monthly Fee</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Paid</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Due</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Payment</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap sticky right-0 bg-slate-50">Actions</th>
                 </tr>
@@ -339,6 +356,9 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
                       </td>
                       <td className="px-3.5 py-3 text-right font-semibold text-rose-600 whitespace-nowrap">
                         ₹{student.dueAmount}
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <PaymentMethodBadge method={student.paymentMethod} />
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         <PaymentBadge status={student.paymentStatus} />

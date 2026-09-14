@@ -9,6 +9,8 @@ import { FlexibleStatusBadge } from "@/components/flexible-membership/flexible-s
 import { HoursProgressBar } from "@/components/flexible-membership/hours-progress-bar";
 import { FlexibleMembershipDrawer } from "@/components/flexible-membership/flexible-membership-drawer";
 import { FlexibleMembershipModal } from "@/components/flexible-membership/flexible-membership-modal";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExportDropdown } from "@/components/admin/common/export-dropdown";
@@ -28,6 +30,7 @@ const EXPORT_COLUMNS: ExportColumn<FlexibleMembershipRecord>[] = [
   { header: "Hours Used", key: "hoursUsed", formatter: (r) => `${r.hoursUsed} hrs` },
   { header: "Hours Remaining", key: "hoursRemaining", formatter: (r) => `${r.hoursRemaining} hrs` },
   { header: "Amount Paid", key: "amountPaid", formatter: (r) => `₹${r.amountPaid}` },
+  { header: "Payment Method", key: "paymentMethod" },
   { header: "Status", key: "status" },
   { header: "Joining Date", key: "joiningDate" },
   { header: "Expiry Date", key: "expiryDate" },
@@ -39,6 +42,7 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("All");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Drawer & Modal
@@ -59,9 +63,12 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
       if (statusFilter !== "All" && r.status !== statusFilter) {
         return false;
       }
+      if (paymentMethodFilter !== "All" && r.paymentMethod !== paymentMethodFilter) {
+        return false;
+      }
       return true;
     });
-  }, [records, selectedBranch, searchQuery, statusFilter]);
+  }, [records, selectedBranch, searchQuery, statusFilter, paymentMethodFilter]);
 
   const selectedRecords = useMemo(() => {
     return records.filter((r) => selectedIds.includes(r.id));
@@ -214,19 +221,26 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
           onChange={setSearchQuery}
           placeholder="Search by primary mobile number..."
         />
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500">Status:</span>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs"
-          >
-            <option value="All">All Statuses</option>
-            <option value="Active">Active</option>
-            <option value="Expiring Soon">Expiring Soon</option>
-            <option value="Expired">Expired</option>
-            <option value="Completed">Completed</option>
-          </select>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500">Status:</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Active">Active</option>
+              <option value="Expiring Soon">Expiring Soon</option>
+              <option value="Expired">Expired</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+
+          <PaymentMethodFilter
+            value={paymentMethodFilter}
+            onChange={setPaymentMethodFilter}
+          />
         </div>
       </div>
 
@@ -257,6 +271,7 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
                   <th className="px-3.5 py-3 whitespace-nowrap">Branch</th>
                   <th className="px-3.5 py-3 whitespace-nowrap min-w-[160px]">Court Hours Balance</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Amount Paid</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Joining Date</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Expiry Date</th>
@@ -300,6 +315,9 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
                       </td>
                       <td className="px-3.5 py-3 text-right font-semibold text-emerald-600 whitespace-nowrap">
                         ₹{r.amountPaid}
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <PaymentMethodBadge method={r.paymentMethod} />
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         <FlexibleStatusBadge status={r.status} />

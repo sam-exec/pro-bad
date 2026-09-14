@@ -8,6 +8,7 @@ import {
   MEMBERSHIP_PLANS,
 } from "@/types/membership";
 import { MONTHS, StudentStatus } from "@/types/kids-coaching";
+import { PaymentMethod } from "@/types/payment";
 import { AdditionalMemberCard } from "./additional-member-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,7 @@ export function MembershipFormModal({
   const [expiryDate, setExpiryDate] = useState("2026-12-31");
   const [monthlyFee, setMonthlyFee] = useState<number>(600);
   const [amountPaid, setAmountPaid] = useState<number>(600);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
   const [currentMonth, setCurrentMonth] = useState<string>("March");
   const [status, setStatus] = useState<StudentStatus>("Active");
   const [remarks, setRemarks] = useState("");
@@ -58,6 +60,7 @@ export function MembershipFormModal({
       setExpiryDate(membershipToEdit.expiryDate);
       setMonthlyFee(membershipToEdit.monthlyFee);
       setAmountPaid(membershipToEdit.amountPaid);
+      setPaymentMethod(membershipToEdit.paymentMethod || "UPI");
       setCurrentMonth(membershipToEdit.currentMonth);
       setStatus(membershipToEdit.status);
       setRemarks(membershipToEdit.remarks || "");
@@ -72,6 +75,7 @@ export function MembershipFormModal({
       setExpiryDate("2026-12-31");
       setMonthlyFee(600);
       setAmountPaid(600);
+      setPaymentMethod("UPI");
       setCurrentMonth("March");
       setStatus("Active");
       setRemarks("");
@@ -126,6 +130,9 @@ export function MembershipFormModal({
     if (monthlyFee < 0) {
       newErrors.monthlyFee = "Fee cannot be negative.";
     }
+    if (amountPaid > 0 && !paymentMethod) {
+      newErrors.paymentMethod = "Payment method is required when amount paid > 0.";
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -152,6 +159,7 @@ export function MembershipFormModal({
       amountPaid: Number(amountPaid),
       dueAmount,
       paymentStatus,
+      paymentMethod,
       status,
       currentMonth,
       remarks: remarks.trim() || undefined,
@@ -349,6 +357,24 @@ export function MembershipFormModal({
                   value={amountPaid}
                   onChange={(e) => setAmountPaid(Number(e.target.value))}
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="priMethod" required={amountPaid > 0}>
+                  Payment Method
+                </Label>
+                <select
+                  id="priMethod"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                  className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-800"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI</option>
+                </select>
+                {errors.paymentMethod && (
+                  <p className="text-xs text-red-600">{errors.paymentMethod}</p>
+                )}
               </div>
 
               {/* Status */}

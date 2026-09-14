@@ -77,6 +77,8 @@ export interface CartItem {
   maxStock: number;
 }
 
+import { PaymentMethod } from "./payment";
+
 export interface POSSalePayload {
   customerName: string;
   customerMobile: string;
@@ -87,7 +89,7 @@ export interface POSSalePayload {
   taxRate: number; // e.g., 0.18 for 18% GST
   taxAmount: number;
   totalAmount: number;
-  paymentMethod: "UPI" | "Cash" | "Card" | "NetBanking";
+  paymentMethod: PaymentMethod;
   notes?: string;
   branchId: string;
   branchName: string;

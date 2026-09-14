@@ -31,7 +31,9 @@ export const SALES_PRODUCT_LIST = [
 
 export type SalesProduct = typeof SALES_PRODUCT_LIST[number];
 
-export type SalesPaymentMethod = "Cash" | "UPI";
+import { PaymentMethod } from "./payment";
+
+export type SalesPaymentMethod = PaymentMethod;
 
 export interface SaleLineItem {
   id: string;
@@ -50,7 +52,7 @@ export interface SaleTransaction {
   customerPhone: string;
   items: SaleLineItem[];
   grandTotal: number;
-  paymentMethod: SalesPaymentMethod;
+  paymentMethod: PaymentMethod;
   employeeId: string;
   employeeName: string;
   branchId: string;
@@ -70,6 +72,7 @@ export interface SalesFilterOptions {
   startDate?: string;
   endDate?: string;
   searchQuery?: string;
+  paymentMethod?: PaymentMethod | "all";
 }
 
 export interface EmployeeTodayStats {

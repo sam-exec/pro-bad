@@ -10,6 +10,7 @@ export interface BranchRecordMeta {
 }
 
 import { ExcelRecordMeta } from "./excel";
+import { PaymentMethod, PaymentStatus } from "./payment";
 
 /**
  * Sales Record schema mapped to Sales.xlsx -> Sales Worksheet
@@ -22,7 +23,7 @@ export interface SalesRecord extends ExcelRecordMeta {
   category: "Coaching" | "Membership" | "Court Booking" | "Merchandise";
   description: string;
   amount: number;
-  paymentMethod: "UPI" | "Cash" | "Card" | "NetBanking";
+  paymentMethod: PaymentMethod;
   date: string;
   createdBy: string;
 }
@@ -41,6 +42,8 @@ export interface SuperMomsRecord extends ExcelRecordMeta {
   monthlyFee: number;
   amountPaid: number;
   dueAmount: number;
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
   joiningDate: string;
   status: "Active" | "Inactive";
   createdBy: string;

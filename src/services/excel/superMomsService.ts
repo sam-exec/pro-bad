@@ -79,15 +79,17 @@ export class SuperMomsService {
     auditMeta: BranchRecordMeta
   ): Promise<SuperMomsRecord> {
     const timestamp = new Date().toISOString();
-    const existing = await this.getAll(auditMeta.branchId);
-    const count = existing.length + 1;
-    const formattedId = `SM-2026-${String(count).padStart(3, "0")}`;
+    const existing = await this.getAll();
+    const maxSerial = existing.reduce((m, r) => Math.max(m, r.serialNumber || 0), 0);
+    const serialNumber = (data as any).serialNumber ?? (maxSerial + 1);
+    const formattedId = `SM-2026-${String(serialNumber).padStart(3, "0")}`;
     const id = `sm-${Date.now()}`;
 
     const newRecord: SuperMomsRecord = {
       ...data,
       id,
       recordId: id,
+      serialNumber,
       memberId: formattedId,
       branchId: auditMeta.branchId,
       branchName: auditMeta.branchName,

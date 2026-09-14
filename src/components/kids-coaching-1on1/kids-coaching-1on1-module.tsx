@@ -20,6 +20,9 @@ import {
   TIMING_SLOTS_1ON1,
 } from "@/types/coaching-modules";
 import { COACHES, MONTHS, YEARS, Gender, StudentStatus } from "@/types/kids-coaching";
+import { PaymentMethod } from "@/types/payment";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { kidsService } from "@/services/excel";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
@@ -58,6 +61,8 @@ export function KidsCoaching1on1Module() {
   const [sessionsCompleted, setSessionsCompleted] = useState<number>(0);
   const [feeAmount, setFeeAmount] = useState<number>(250);
   const [amountPaid, setAmountPaid] = useState<number>(250);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
   const [status, setStatus] = useState<StudentStatus>("Active");
   const [remarks, setRemarks] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -77,6 +82,7 @@ export function KidsCoaching1on1Module() {
       setSessionsCompleted(studentToEdit.sessionsCompleted);
       setFeeAmount(studentToEdit.feeAmount);
       setAmountPaid(studentToEdit.amountPaid);
+      setPaymentMethod(studentToEdit.paymentMethod || "UPI");
       setStatus(studentToEdit.status);
       setRemarks(studentToEdit.remarks || "");
     } else {
@@ -92,6 +98,7 @@ export function KidsCoaching1on1Module() {
       setSessionsCompleted(0);
       setFeeAmount(250);
       setAmountPaid(250);
+      setPaymentMethod("UPI");
       setStatus("Active");
       setRemarks("");
     }
@@ -109,9 +116,10 @@ export function KidsCoaching1on1Module() {
       }
       if (selectedMonth !== "All" && s.month !== selectedMonth) return false;
       if (s.year !== selectedYear) return false;
+      if (paymentMethodFilter !== "all" && s.paymentMethod !== paymentMethodFilter) return false;
       return true;
     });
-  }, [students, currentBranch.id, searchQuery, selectedMonth, selectedYear]);
+  }, [students, currentBranch.id, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
   // Save / Update Handler
   const handleSave = async (e: React.FormEvent) => {
@@ -125,6 +133,9 @@ export function KidsCoaching1on1Module() {
     }
     if (age <= 0) newErrors.age = "Valid age is required.";
     if (feeAmount < 0) newErrors.feeAmount = "Fee cannot be negative.";
+    if (amountPaid > 0 && !paymentMethod) {
+      newErrors.paymentMethod = "Payment method is required when amount paid > 0.";
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -160,6 +171,7 @@ export function KidsCoaching1on1Module() {
           amountPaid: Number(amountPaid),
           dueAmount,
           paymentStatus,
+          paymentMethod,
           status,
           remarks: remarks.trim(),
         },
@@ -190,7 +202,7 @@ export function KidsCoaching1on1Module() {
           amountPaid: Number(amountPaid),
           dueAmount,
           paymentStatus,
-          paymentMethod: "UPI",
+          paymentMethod,
           joiningDate: new Date().toISOString().split("T")[0],
           month: "March",
           year: 2026,
@@ -246,6 +258,10 @@ export function KidsCoaching1on1Module() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <PaymentMethodFilter
+            value={paymentMethodFilter}
+            onChange={setPaymentMethodFilter}
+          />
           <MonthFilter
             selectedMonth={selectedMonth}
             onMonthChange={setSelectedMonth}
@@ -304,11 +320,12 @@ export function KidsCoaching1on1Module() {
                     <th className="px-3 py-3 whitespace-nowrap">Session Package</th>
                     <th className="px-3 py-3 text-center whitespace-nowrap">Completed</th>
                     <th className="px-3 py-3 text-center whitespace-nowrap">Remaining</th>
-                    <th className="px-3 py-3 text-right whitespace-nowrap">Fee Amount</th>
-                    <th className="px-3 py-3 text-right whitespace-nowrap">Amount Paid</th>
-                    <th className="px-3 py-3 text-right whitespace-nowrap">Due Amount</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Payment</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Joining Date</th>
+                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Fee Amount</th>
+                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Amount Paid</th>
+                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Due Amount</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
+                    <th className="px-3.5 py-3 whitespace-nowrap">Joining Date</th>
                     <th className="px-3 py-3 whitespace-nowrap">Status</th>
                     <th className="px-3 py-3 whitespace-nowrap">Last Updated</th>
                     <th className="px-3 py-3 text-right whitespace-nowrap sticky right-0 bg-slate-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.04)]">
@@ -355,13 +372,16 @@ export function KidsCoaching1on1Module() {
                       <td className="px-3 py-3 text-right font-semibold text-emerald-600 whitespace-nowrap">
                         ₹{s.amountPaid}
                       </td>
-                      <td className="px-3 py-3 text-right font-semibold text-rose-600 whitespace-nowrap">
+                      <td className="px-3.5 py-3 text-right font-semibold text-rose-600 whitespace-nowrap">
                         ₹{s.dueAmount}
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <PaymentMethodBadge method={s.paymentMethod} />
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
                         <PaymentBadge status={s.paymentStatus} />
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-slate-500">
+                      <td className="px-3.5 py-3 whitespace-nowrap text-slate-500">
                         {s.joiningDate}
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
@@ -427,9 +447,10 @@ export function KidsCoaching1on1Module() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <PaymentBadge status={s.paymentStatus} />
+                      <PaymentMethodBadge method={s.paymentMethod} />
                       <span className="text-xs font-semibold text-slate-700">
                         ₹{s.amountPaid} {s.dueAmount > 0 && <span className="text-rose-600 ml-1">Due: ₹{s.dueAmount}</span>}
                       </span>
@@ -556,7 +577,11 @@ export function KidsCoaching1on1Module() {
                     <span className="text-slate-400">Due</span>
                     <p className="text-base font-bold text-rose-600 mt-1">₹{viewingStudent.dueAmount}</p>
                   </div>
-                  <div className="col-span-3 pt-2 flex items-center justify-between">
+                  <div className="col-span-3 pt-2 flex items-center justify-between border-t border-slate-200/60">
+                    <span className="text-slate-500">Method:</span>
+                    <PaymentMethodBadge method={viewingStudent.paymentMethod} />
+                  </div>
+                  <div className="col-span-3 pt-1 flex items-center justify-between">
                     <span className="text-slate-500">Status:</span>
                     <PaymentBadge status={viewingStudent.paymentStatus} />
                   </div>
@@ -747,6 +772,19 @@ export function KidsCoaching1on1Module() {
                     value={amountPaid}
                     onChange={(e) => setAmountPaid(Number(e.target.value))}
                   />
+                </div>
+                <div>
+                  <Label htmlFor="paymentMethod" required={amountPaid > 0}>Payment Method</Label>
+                  <select
+                    id="paymentMethod"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                    className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm bg-white"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                  </select>
+                  {errors.paymentMethod && <p className="text-xs text-red-600">{errors.paymentMethod}</p>}
                 </div>
                 <div className="sm:col-span-2">
                   <Label htmlFor="status" required>Status</Label>

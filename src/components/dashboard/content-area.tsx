@@ -7,6 +7,7 @@ import { AdultsCoachingModule } from "@/components/adults-coaching/adults-coachi
 import { AdultsCoaching1on1Module } from "@/components/adults-coaching-1on1/adults-coaching-1on1-module";
 import { MembershipModule } from "@/components/membership/membership-module";
 import { FlexibleMembershipModule } from "@/components/flexible-membership/flexible-membership-module";
+import { SuperMomsModule } from "@/components/super-moms/super-moms-module";
 import { EmployeeSalesModule } from "@/components/sales/employee-sales-module";
 
 interface ContentAreaProps {
@@ -33,6 +34,8 @@ export function ContentArea({ currentModule }: ContentAreaProps) {
           <MembershipModule />
         ) : currentModule === "flexible-membership" ? (
           <FlexibleMembershipModule />
+        ) : currentModule === "super-moms" ? (
+          <SuperMomsModule />
         ) : (
           activeItem && <ModulePlaceholder item={activeItem} />
         )}

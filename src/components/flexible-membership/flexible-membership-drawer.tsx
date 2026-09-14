@@ -13,6 +13,7 @@ import {
   Mail,
   Phone,
   AlertCircle,
+  CreditCard,
 } from "lucide-react";
 import {
   FlexibleMembershipRecord,
@@ -20,6 +21,7 @@ import {
 } from "@/types/flexible-membership";
 import { FlexibleStatusBadge } from "./flexible-status-badge";
 import { HoursProgressBar } from "./hours-progress-bar";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { Button } from "@/components/ui/button";
 
 interface FlexibleMembershipDrawerProps {
@@ -137,6 +139,62 @@ export function FlexibleMembershipDrawer({
                     ? "Expired"
                     : `${daysLeft} Days Left (until ${membership.expiryDate})`}
                 </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Fee & Payment Details */}
+          <div className="space-y-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <CreditCard className="w-3.5 h-3.5 text-blue-600" />
+              <span>Fee & Payment Details</span>
+            </span>
+
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs space-y-2.5">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <span className="text-slate-400">Package Fee</span>
+                  <p className="font-semibold text-slate-800 font-mono mt-0.5">
+                    ₹{(membership.planFee || 450).toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-slate-400">Amount Paid</span>
+                  <p className="font-bold text-emerald-600 font-mono mt-0.5">
+                    ₹{(membership.amountPaid || 0).toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-slate-400">Due Amount</span>
+                  <p
+                    className={`font-bold font-mono mt-0.5 ${
+                      (membership.dueAmount || 0) > 0 ? "text-rose-600" : "text-slate-700"
+                    }`}
+                  >
+                    ₹{(membership.dueAmount || 0).toLocaleString("en-IN")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 items-center">
+                <div>
+                  <span className="text-slate-400 block mb-1">Payment Method</span>
+                  <PaymentMethodBadge method={membership.paymentMethod} />
+                </div>
+                <div>
+                  <span className="text-slate-400 block mb-1">Payment Status</span>
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
+                      membership.paymentStatus === "Paid"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : membership.paymentStatus === "Partial"
+                        ? "bg-amber-50 text-amber-700 border border-amber-200"
+                        : "bg-rose-50 text-rose-700 border border-rose-200"
+                    }`}
+                  >
+                    {membership.paymentStatus || "Paid"}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

@@ -3,6 +3,8 @@
 import React, { useState, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { MembershipRecord } from "@/types/membership";
+import { PaymentMethod } from "@/types/payment";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { membershipService } from "@/services/excel";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
@@ -20,6 +22,7 @@ export function MembershipModule() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
 
   // Modal & Drawer State
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -30,7 +33,7 @@ export function MembershipModule() {
     null
   );
 
-  // Filter logic: Search by Primary Mobile + Branch Isolation + Month/Year
+  // Filter logic: Search by Primary Mobile + Branch Isolation + Month/Year + Payment Method
   const filteredMemberships = useMemo(() => {
     return memberships.filter((m) => {
       // Branch Isolation
@@ -57,9 +60,14 @@ export function MembershipModule() {
         return false;
       }
 
+      // Payment Method filter
+      if (paymentMethodFilter !== "all" && m.paymentMethod !== paymentMethodFilter) {
+        return false;
+      }
+
       return true;
     });
-  }, [memberships, currentBranch.id, searchQuery, selectedMonth, selectedYear]);
+  }, [memberships, currentBranch.id, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
   // Aggregate stats
   const metrics = useMemo(() => {
@@ -167,6 +175,10 @@ export function MembershipModule() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <PaymentMethodFilter
+            value={paymentMethodFilter}
+            onChange={setPaymentMethodFilter}
+          />
           <MonthFilter
             selectedMonth={selectedMonth}
             onMonthChange={setSelectedMonth}
@@ -187,9 +199,9 @@ export function MembershipModule() {
       </div>
 
       {/* Filter Reset Indicator */}
-      {(searchQuery || selectedMonth !== "All") && (
+      {(searchQuery || selectedMonth !== "All" || paymentMethodFilter !== "all") && (
         <div className="flex items-center justify-between px-1 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span>Filtering by:</span>
             {searchQuery && (
               <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-medium">
@@ -201,12 +213,18 @@ export function MembershipModule() {
                 Month: {selectedMonth}
               </span>
             )}
+            {paymentMethodFilter !== "all" && (
+              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-medium">
+                Method: {paymentMethodFilter}
+              </span>
+            )}
           </div>
           <button
             type="button"
             onClick={() => {
               setSearchQuery("");
               setSelectedMonth("All");
+              setPaymentMethodFilter("all");
             }}
             className="text-blue-600 hover:underline font-medium cursor-pointer"
           >

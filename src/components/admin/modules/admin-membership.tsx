@@ -3,6 +3,9 @@
 import React, { useState, useMemo } from "react";
 import { Plus, Users, CreditCard, DollarSign, Eye, Edit2 } from "lucide-react";
 import { MembershipRecord, MEMBERSHIP_PLANS } from "@/types/membership";
+import { PaymentMethod } from "@/types/payment";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { membershipService } from "@/services/excel";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
@@ -34,6 +37,7 @@ const EXPORT_COLUMNS: ExportColumn<MembershipRecord>[] = [
   { header: "Monthly Fee", key: "monthlyFee", formatter: (r) => `₹${r.monthlyFee}` },
   { header: "Amount Paid", key: "amountPaid", formatter: (r) => `₹${r.amountPaid}` },
   { header: "Due Amount", key: "dueAmount", formatter: (r) => `₹${r.dueAmount}` },
+  { header: "Payment Method", key: "paymentMethod" },
   { header: "Payment Status", key: "paymentStatus" },
   { header: "Status", key: "status" },
   { header: "Joining Date", key: "joiningDate" },
@@ -47,6 +51,7 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Drawer & Modal
@@ -70,9 +75,12 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
       if (r.year !== selectedYear) {
         return false;
       }
+      if (paymentMethodFilter !== "all" && r.paymentMethod !== paymentMethodFilter) {
+        return false;
+      }
       return true;
     });
-  }, [records, selectedBranch, searchQuery, selectedMonth, selectedYear]);
+  }, [records, selectedBranch, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
   const selectedRecords = useMemo(() => {
     return records.filter((r) => selectedIds.includes(r.id));
@@ -228,12 +236,18 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
           onChange={setSearchQuery}
           placeholder="Search by primary mobile number..."
         />
-        <MonthFilter
-          selectedMonth={selectedMonth}
-          onMonthChange={setSelectedMonth}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-        />
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <PaymentMethodFilter
+            value={paymentMethodFilter}
+            onChange={setPaymentMethodFilter}
+          />
+          <MonthFilter
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -266,7 +280,8 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Fee</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Paid</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Due</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Payment</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Joining Date</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap sticky right-0 bg-slate-50">Actions</th>
@@ -320,6 +335,9 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
                       </td>
                       <td className="px-3.5 py-3 text-right font-semibold text-rose-600 whitespace-nowrap">
                         ₹{r.dueAmount}
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <PaymentMethodBadge method={r.paymentMethod} />
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         <PaymentBadge status={r.paymentStatus} />

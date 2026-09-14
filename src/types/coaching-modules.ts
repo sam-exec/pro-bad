@@ -56,6 +56,7 @@ export interface AdultCoachMember extends AuditMetadata {
   paidAmount: number;
   dueAmount: number;
   paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
   currentMonth: string;
   year: number;
   status: StudentStatus;
@@ -81,6 +82,7 @@ export interface Adult1on1Member extends AuditMetadata {
   paidAmount: number;
   dueAmount: number;
   paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
   joiningDate: string;
   month: string;
   year: number;

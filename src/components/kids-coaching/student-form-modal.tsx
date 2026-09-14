@@ -54,6 +54,7 @@ export function StudentFormModal({
     mobileNumber?: string;
     age?: string;
     monthlyFee?: string;
+    paymentMethod?: string;
   }>({});
 
   // Synchronize when opening for edit or new
@@ -118,6 +119,9 @@ export function StudentFormModal({
     }
     if (age <= 0) newErrors.age = "Enter a valid age.";
     if (monthlyFee < 0) newErrors.monthlyFee = "Monthly fee cannot be negative.";
+    if (amountPaid > 0 && !paymentMethod) {
+      newErrors.paymentMethod = "Payment method is required when amount paid is greater than 0.";
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -354,22 +358,6 @@ export function StudentFormModal({
                   <option value="Inactive">Inactive</option>
                 </select>
               </div>
-
-              {/* Payment Method */}
-              <div className="space-y-1">
-                <Label htmlFor="paymentMethod" required>
-                  Payment Method
-                </Label>
-                <select
-                  id="paymentMethod"
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
-                >
-                  <option value="UPI">UPI</option>
-                  <option value="Cash">Cash</option>
-                </select>
-              </div>
             </div>
           </div>
 
@@ -379,7 +367,7 @@ export function StudentFormModal({
               <IndianRupee className="w-3.5 h-3.5 text-blue-600" />
               <span>Fee & Billing</span>
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
               <div className="space-y-1">
                 <Label htmlFor="monthlyFee" required>
                   Monthly Fee (₹)
@@ -409,6 +397,24 @@ export function StudentFormModal({
                   value={amountPaid}
                   onChange={(e) => setAmountPaid(Number(e.target.value))}
                 />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="paymentMethod" required={amountPaid > 0}>
+                  Payment Method
+                </Label>
+                <select
+                  id="paymentMethod"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                  className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI</option>
+                </select>
+                {errors.paymentMethod && (
+                  <p className="text-xs text-red-600">{errors.paymentMethod}</p>
+                )}
               </div>
 
               <div className="space-y-1">

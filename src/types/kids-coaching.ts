@@ -1,6 +1,6 @@
-export type PaymentStatus = "Paid" | "Partial" | "Pending";
+import { PaymentStatus, PaymentMethod } from "./payment";
+export type { PaymentStatus, PaymentMethod };
 export type StudentStatus = "Active" | "Inactive";
-export type PaymentMethod = "Cash" | "UPI";
 export type Gender = "Male" | "Female" | "Other";
 
 import { ExcelRecordMeta } from "./excel";

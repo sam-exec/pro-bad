@@ -3,10 +3,13 @@
 import React, { useState, useMemo } from "react";
 import { Plus, Users, Heart, DollarSign, Eye, Edit2, X } from "lucide-react";
 import { SuperMomsRecord } from "@/types/branch";
+import { PaymentMethod, PaymentStatus } from "@/types/payment";
 import { superMomsService } from "@/services/excel";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
 import { PaymentBadge } from "@/components/kids-coaching/payment-badge";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +37,7 @@ const EXPORT_COLUMNS: ExportColumn<SuperMomsRecord>[] = [
   { header: "Monthly Fee", key: "monthlyFee", formatter: (r) => `₹${r.monthlyFee}` },
   { header: "Amount Paid", key: "amountPaid", formatter: (r) => `₹${r.amountPaid}` },
   { header: "Due Amount", key: "dueAmount", formatter: (r) => `₹${r.dueAmount}` },
+  { header: "Payment Method", key: "paymentMethod" },
   { header: "Status", key: "status" },
   { header: "Joining Date", key: "joiningDate" },
 ];
@@ -44,6 +48,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("All");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("All");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Drawer & Modal states
@@ -58,6 +63,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
     coach: "Coach Sunita Rao",
     monthlyFee: 140,
     amountPaid: 140,
+    paymentMethod: "Cash" as PaymentMethod,
     joiningDate: "2026-03-01",
     status: "Active" as const,
   });
@@ -75,9 +81,12 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
       if (selectedBatch !== "All" && r.batch !== selectedBatch) {
         return false;
       }
+      if (paymentMethodFilter !== "All" && r.paymentMethod !== paymentMethodFilter) {
+        return false;
+      }
       return true;
     });
-  }, [records, selectedBranch, searchQuery, selectedBatch]);
+  }, [records, selectedBranch, searchQuery, selectedBatch, paymentMethodFilter]);
 
   const selectedRecords = useMemo(() => {
     return records.filter((r) => selectedIds.includes(r.id));
@@ -120,6 +129,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
       coach: "Coach Sunita Rao",
       monthlyFee: 140,
       amountPaid: 140,
+      paymentMethod: "Cash",
       joiningDate: new Date().toISOString().split("T")[0],
       status: "Active",
     });
@@ -135,6 +145,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
       coach: r.coach,
       monthlyFee: r.monthlyFee,
       amountPaid: r.amountPaid,
+      paymentMethod: r.paymentMethod || "Cash",
       joiningDate: r.joiningDate,
       status: r.status as any,
     });
@@ -147,12 +158,20 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
     const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
 
     const dueAmount = Math.max(0, formData.monthlyFee - formData.amountPaid);
+    const paymentStatus: PaymentStatus =
+      formData.amountPaid >= formData.monthlyFee ? "Paid" : formData.amountPaid > 0 ? "Partial" : "Pending";
+    const payload = {
+      ...formData,
+      dueAmount,
+      paymentStatus,
+      paymentMethod: formData.paymentMethod || "Cash",
+    };
 
     if (recordToEdit) {
-      superMomsService.update(recordToEdit.id, { ...formData, dueAmount }, "ADM001");
+      superMomsService.update(recordToEdit.id, payload, "ADM001");
     } else {
       superMomsService.create(
-        { ...formData, dueAmount },
+        payload,
         {
           branchId: targetBranchId,
           branchName: targetBranchName,
@@ -263,18 +282,25 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
           onChange={setSearchQuery}
           placeholder="Search by mobile number..."
         />
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500">Batch:</span>
-          <select
-            value={selectedBatch}
-            onChange={(e) => setSelectedBatch(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs"
-          >
-            <option value="All">All Batches</option>
-            {SUPER_MOMS_BATCHES.map((b) => (
-              <option key={b} value={b}>{b}</option>
-            ))}
-          </select>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500">Batch:</span>
+            <select
+              value={selectedBatch}
+              onChange={(e) => setSelectedBatch(e.target.value)}
+              className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 shadow-2xs"
+            >
+              <option value="All">All Batches</option>
+              {SUPER_MOMS_BATCHES.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
+
+          <PaymentMethodFilter
+            value={paymentMethodFilter}
+            onChange={setPaymentMethodFilter}
+          />
         </div>
       </div>
 
@@ -308,6 +334,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Monthly Fee</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Paid</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Due</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Joining Date</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap sticky right-0 bg-slate-50">Actions</th>
@@ -359,6 +386,9 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                       </td>
                       <td className="px-3.5 py-3 text-right font-semibold text-rose-600 whitespace-nowrap">
                         ₹{r.dueAmount}
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <PaymentMethodBadge method={r.paymentMethod} />
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         <StatusBadge status={r.status as any} />
@@ -431,6 +461,8 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                 <div className="flex justify-between"><span className="text-slate-500">Monthly Fee:</span><span className="font-semibold text-slate-800">₹{viewingRecord.monthlyFee}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Paid:</span><span className="font-semibold text-emerald-600">₹{viewingRecord.amountPaid}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Due:</span><span className="font-semibold text-rose-600">₹{viewingRecord.dueAmount}</span></div>
+                <div className="flex justify-between items-center"><span className="text-slate-500">Payment Method:</span><PaymentMethodBadge method={viewingRecord.paymentMethod} /></div>
+                <div className="flex justify-between items-center"><span className="text-slate-500">Payment Status:</span><span className={`px-2 py-0.5 rounded text-xs font-semibold ${viewingRecord.paymentStatus === "Paid" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : viewingRecord.paymentStatus === "Partial" ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>{viewingRecord.paymentStatus || (viewingRecord.dueAmount === 0 ? "Paid" : "Partial")}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Joining Date:</span><span className="font-semibold text-slate-800">{viewingRecord.joiningDate}</span></div>
               </div>
             </div>
@@ -505,7 +537,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <Label className="text-xs">Monthly Fee (₹)</Label>
                     <Input
@@ -523,6 +555,20 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                       onChange={(e) => setFormData({ ...formData, amountPaid: Number(e.target.value) })}
                       className="h-9 mt-1 text-xs"
                     />
+                  </div>
+                  <div>
+                    <Label className="text-xs">
+                      Payment Method {formData.amountPaid > 0 && <span className="text-red-500">*</span>}
+                    </Label>
+                    <select
+                      value={formData.paymentMethod}
+                      onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value as PaymentMethod })}
+                      className="w-full h-9 mt-1 rounded-lg border border-slate-200 px-2.5 text-xs bg-white"
+                      required={formData.amountPaid > 0}
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="UPI">UPI</option>
+                    </select>
                   </div>
                 </div>
 

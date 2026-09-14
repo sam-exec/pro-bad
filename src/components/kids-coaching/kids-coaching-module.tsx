@@ -3,6 +3,8 @@
 import React, { useState, useMemo } from "react";
 import { Plus, Users, Award } from "lucide-react";
 import { Student, StudentFormData } from "@/types/kids-coaching";
+import { PaymentMethod } from "@/types/payment";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { kidsService } from "@/services/excel";
 import { SearchBar } from "./search-bar";
 import { MonthFilter } from "./month-filter";
@@ -18,13 +20,14 @@ export function KidsCoachingModule() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
 
   // Modal & Drawer states
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
 
-  // Filtered Students (Branch Isolation + phone search + month/year filters)
+  // Filtered Students (Branch Isolation + phone search + month/year filters + payment method filter)
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
       // Data Isolation: only show records belonging to current branch
@@ -51,9 +54,14 @@ export function KidsCoachingModule() {
         return false;
       }
 
+      // Filter by Payment Method
+      if (paymentMethodFilter !== "all" && student.paymentMethod !== paymentMethodFilter) {
+        return false;
+      }
+
       return true;
     });
-  }, [students, currentBranch.id, searchQuery, selectedMonth, selectedYear]);
+  }, [students, currentBranch.id, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
   // Summary Metrics for current branch view
   const metrics = useMemo(() => {
@@ -155,8 +163,13 @@ export function KidsCoachingModule() {
           />
         </div>
 
-        {/* Right: Month/Year Filters & Add Student Button */}
+        {/* Right: Month/Year Filters, Payment Method Filter & Add Student Button */}
         <div className="flex flex-wrap items-center gap-2.5">
+          <PaymentMethodFilter
+            value={paymentMethodFilter}
+            onChange={setPaymentMethodFilter}
+          />
+
           <MonthFilter
             selectedMonth={selectedMonth}
             onMonthChange={setSelectedMonth}
@@ -174,10 +187,10 @@ export function KidsCoachingModule() {
         </div>
       </div>
 
-      {/* Active Filter Indicator if Search or Month is active */}
-      {(searchQuery || selectedMonth !== "All") && (
+      {/* Active Filter Indicator if Search, Month or Method is active */}
+      {(searchQuery || selectedMonth !== "All" || paymentMethodFilter !== "all") && (
         <div className="flex items-center justify-between px-1 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span>Filtering by:</span>
             {searchQuery && (
               <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-medium">
@@ -189,12 +202,18 @@ export function KidsCoachingModule() {
                 Month: {selectedMonth}
               </span>
             )}
+            {paymentMethodFilter !== "all" && (
+              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-medium">
+                Method: {paymentMethodFilter}
+              </span>
+            )}
           </div>
           <button
             type="button"
             onClick={() => {
               setSearchQuery("");
               setSelectedMonth("All");
+              setPaymentMethodFilter("all");
             }}
             className="text-blue-600 hover:underline font-medium cursor-pointer"
           >

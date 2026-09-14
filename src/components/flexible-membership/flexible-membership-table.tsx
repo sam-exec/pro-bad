@@ -3,6 +3,7 @@ import { Eye, Edit2, Clock, Plus, Phone, Calendar, Users } from "lucide-react";
 import { FlexibleMembershipRecord } from "@/types/flexible-membership";
 import { FlexibleStatusBadge } from "./flexible-status-badge";
 import { HoursProgressBar } from "./hours-progress-bar";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -57,6 +58,8 @@ export function FlexibleMembershipTable({
                 <th className="px-3.5 py-3 text-center whitespace-nowrap">Total Hours</th>
                 <th className="px-3.5 py-3 text-center whitespace-nowrap">Hours Used</th>
                 <th className="px-3.5 py-3 text-center whitespace-nowrap">Remaining</th>
+                <th className="px-3.5 py-3 text-right whitespace-nowrap">Amount Paid</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Joining Date</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Expiry Date (45d)</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
@@ -130,6 +133,16 @@ export function FlexibleMembershipTable({
                       >
                         {m.hoursRemaining}h
                       </span>
+                    </td>
+
+                    {/* Amount Paid */}
+                    <td className="px-3.5 py-3 text-right font-semibold text-emerald-600 whitespace-nowrap">
+                      ₹{m.amountPaid?.toLocaleString("en-IN") || 0}
+                    </td>
+
+                    {/* Payment Method */}
+                    <td className="px-3.5 py-3 whitespace-nowrap">
+                      <PaymentMethodBadge method={m.paymentMethod} />
                     </td>
 
                     {/* Joining Date */}
@@ -230,9 +243,12 @@ export function FlexibleMembershipTable({
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                  <span className="text-xs font-semibold text-slate-700">
-                    Paid: <strong className="text-emerald-600">₹{m.amountPaid}</strong>
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-700">
+                      Paid: <strong className="text-emerald-600">₹{m.amountPaid}</strong>
+                    </span>
+                    <PaymentMethodBadge method={m.paymentMethod} />
+                  </div>
 
                   <div className="flex items-center gap-1">
                     <Button

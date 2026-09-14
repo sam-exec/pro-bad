@@ -4,6 +4,7 @@ import { Student } from "@/types/kids-coaching";
 import { StudentRow } from "./student-row";
 import { StatusBadge } from "./status-badge";
 import { PaymentBadge } from "./payment-badge";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -58,7 +59,8 @@ export function StudentTable({
                 <th className="px-3.5 py-3 text-right whitespace-nowrap">Monthly Fee</th>
                 <th className="px-3.5 py-3 text-right whitespace-nowrap">Amount Paid</th>
                 <th className="px-3.5 py-3 text-right whitespace-nowrap">Due Amount</th>
-                <th className="px-3.5 py-3 whitespace-nowrap">Payment</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Month</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Last Updated</th>
@@ -123,9 +125,12 @@ export function StudentTable({
               </div>
 
               {/* Bottom: Fees & Action Buttons */}
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <PaymentBadge status={student.paymentStatus} />
+                  {student.amountPaid > 0 && (
+                    <PaymentMethodBadge method={student.paymentMethod} />
+                  )}
                   <span className="text-xs font-semibold text-slate-700">
                     Paid: <span className="text-emerald-600">₹{student.amountPaid}</span>
                     {student.dueAmount > 0 && (

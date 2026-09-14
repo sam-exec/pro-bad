@@ -3,6 +3,7 @@ import { Eye, Edit2, Users, Plus, Phone, Calendar, UserCheck } from "lucide-reac
 import { MembershipRecord } from "@/types/membership";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
 import { PaymentBadge } from "@/components/kids-coaching/payment-badge";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -53,7 +54,8 @@ export function MembershipTable({
                 <th className="px-3.5 py-3 text-right whitespace-nowrap">Monthly Fee</th>
                 <th className="px-3.5 py-3 text-right whitespace-nowrap">Amount Paid</th>
                 <th className="px-3.5 py-3 text-right whitespace-nowrap">Due Amount</th>
-                <th className="px-3.5 py-3 whitespace-nowrap">Payment</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Joining Date</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Expiry Date</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
@@ -125,6 +127,11 @@ export function MembershipTable({
                     {/* Due Amount */}
                     <td className="px-3.5 py-3 text-right font-semibold text-rose-600 whitespace-nowrap">
                       ₹{m.dueAmount}
+                    </td>
+
+                    {/* Payment Method */}
+                    <td className="px-3.5 py-3 whitespace-nowrap">
+                      <PaymentMethodBadge method={m.paymentMethod} />
                     </td>
 
                     {/* Payment Status */}
@@ -226,9 +233,10 @@ export function MembershipTable({
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <PaymentBadge status={m.paymentStatus} />
+                    <PaymentMethodBadge method={m.paymentMethod} />
                     <span className="text-xs font-semibold text-slate-700">
                       ₹{m.amountPaid}{" "}
                       {m.dueAmount > 0 && (

@@ -17,6 +17,8 @@ import {
   TIMING_SLOTS_1ON1,
 } from "@/types/coaching-modules";
 import { COACHES, Gender, StudentStatus, PaymentStatus, PaymentMethod } from "@/types/kids-coaching";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
+import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { kidsService } from "@/services/excel";
 import { SearchBar } from "@/components/kids-coaching/search-bar";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
@@ -49,6 +51,7 @@ const EXPORT_COLUMNS: ExportColumn<Kids1on1Student>[] = [
   { header: "Total Fee", key: "feeAmount", formatter: (r) => `₹${r.feeAmount}` },
   { header: "Paid Amount", key: "amountPaid", formatter: (r) => `₹${r.amountPaid}` },
   { header: "Due Amount", key: "dueAmount", formatter: (r) => `₹${r.dueAmount}` },
+  { header: "Payment Method", key: "paymentMethod" },
   { header: "Payment Status", key: "paymentStatus" },
   { header: "Status", key: "status" },
   { header: "Joining Date", key: "joiningDate" },
@@ -61,6 +64,7 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Drawer & Modal state
@@ -104,9 +108,12 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
       if (s.year !== selectedYear) {
         return false;
       }
+      if (paymentMethodFilter !== "all" && s.paymentMethod !== paymentMethodFilter) {
+        return false;
+      }
       return true;
     });
-  }, [students, selectedBranch, searchQuery, selectedMonth, selectedYear]);
+  }, [students, selectedBranch, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
   const selectedStudents = useMemo(() => {
     return students.filter((s) => selectedIds.includes(s.id));
@@ -322,12 +329,18 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
           onChange={setSearchQuery}
           placeholder="Search by parent mobile number..."
         />
-        <MonthFilter
-          selectedMonth={selectedMonth}
-          onMonthChange={setSelectedMonth}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-        />
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <PaymentMethodFilter
+            value={paymentMethodFilter}
+            onChange={setPaymentMethodFilter}
+          />
+          <MonthFilter
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -362,7 +375,8 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Total Fee</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Paid</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Due</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Payment</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap sticky right-0 bg-slate-50">Actions</th>
                 </tr>
@@ -421,6 +435,9 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
                       </td>
                       <td className="px-3.5 py-3 text-right font-semibold text-rose-600 whitespace-nowrap">
                         ₹{s.dueAmount}
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <PaymentMethodBadge method={s.paymentMethod} />
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         <PaymentBadge status={s.paymentStatus} />
@@ -497,6 +514,7 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
                 <div className="flex justify-between"><span className="text-slate-500">Fee Amount:</span><span className="font-semibold text-slate-800">₹{viewingStudent.feeAmount}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Paid:</span><span className="font-semibold text-emerald-600">₹{viewingStudent.amountPaid}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Due:</span><span className="font-semibold text-rose-600">₹{viewingStudent.dueAmount}</span></div>
+                <div className="flex justify-between items-center"><span className="text-slate-500">Payment Method:</span><PaymentMethodBadge method={viewingStudent.paymentMethod} /></div>
               </div>
             </div>
           </div>

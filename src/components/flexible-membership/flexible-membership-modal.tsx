@@ -9,6 +9,7 @@ import {
   FlexibleStatus,
 } from "@/types/flexible-membership";
 import { LinkedMember } from "@/types/membership";
+import { PaymentMethod } from "@/types/payment";
 import { AdditionalMemberCard } from "@/components/membership/additional-member-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ export function FlexibleMembershipModal({
   const [totalHours, setTotalHours] = useState<number>(30);
   const [hoursUsed, setHoursUsed] = useState<number>(0);
   const [amountPaid, setAmountPaid] = useState<number>(450);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
   const [status, setStatus] = useState<FlexibleStatus>("Active");
   const [remarks, setRemarks] = useState("");
 
@@ -68,6 +70,7 @@ export function FlexibleMembershipModal({
       setTotalHours(membershipToEdit.totalHours || 30);
       setHoursUsed(membershipToEdit.hoursUsed || 0);
       setAmountPaid(membershipToEdit.amountPaid || 450);
+      setPaymentMethod(membershipToEdit.paymentMethod || "Cash");
       setStatus(membershipToEdit.status);
       setRemarks(membershipToEdit.remarks || "");
       setAdditionalMembers(membershipToEdit.additionalMembers || []);
@@ -82,6 +85,7 @@ export function FlexibleMembershipModal({
       setTotalHours(30);
       setHoursUsed(0);
       setAmountPaid(450);
+      setPaymentMethod("Cash");
       setStatus("Active");
       setRemarks("");
       setAdditionalMembers([]);
@@ -133,6 +137,9 @@ export function FlexibleMembershipModal({
     if (hoursUsed < 0 || hoursUsed > totalHours) {
       newErrors.hoursUsed = `Hours used must be between 0 and ${totalHours}.`;
     }
+    if (amountPaid > 0 && !paymentMethod) {
+      newErrors.paymentMethod = "Payment method is required when payment amount > 0.";
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -146,6 +153,11 @@ export function FlexibleMembershipModal({
       expiryDate
     );
 
+    const paidNum = Number(amountPaid);
+    const feeNum = membershipToEdit?.planFee || 450;
+    const dueAmount = Math.max(0, feeNum - paidNum);
+    const paymentStatus = paidNum >= feeNum ? "Paid" : paidNum > 0 ? "Partial" : "Pending";
+
     const payload: Partial<FlexibleMembershipRecord> = {
       primaryMemberName: primaryMemberName.trim(),
       primaryMobileNumber: primaryMobileNumber.trim(),
@@ -156,7 +168,11 @@ export function FlexibleMembershipModal({
       totalHours,
       hoursUsed,
       hoursRemaining: computedRemaining,
-      amountPaid: Number(amountPaid),
+      planFee: feeNum,
+      amountPaid: paidNum,
+      dueAmount,
+      paymentMethod,
+      paymentStatus,
       status: computedStatus,
       remarks: remarks.trim() || undefined,
       additionalMembers,
@@ -353,6 +369,26 @@ export function FlexibleMembershipModal({
                   value={amountPaid}
                   onChange={(e) => setAmountPaid(Number(e.target.value))}
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="flxPaymentMethod" required={amountPaid > 0}>
+                  Payment Method
+                </Label>
+                <select
+                  id="flxPaymentMethod"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                  className={`w-full h-11 px-3 rounded-lg border ${
+                    errors.paymentMethod ? "border-red-300 ring-1 ring-red-300" : "border-slate-200"
+                  } bg-white text-sm text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500`}
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI</option>
+                </select>
+                {errors.paymentMethod && (
+                  <p className="text-xs text-red-600 mt-1">{errors.paymentMethod}</p>
+                )}
               </div>
 
               <div>

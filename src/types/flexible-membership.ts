@@ -1,5 +1,6 @@
 import { LinkedMember } from "./membership";
 import { AuditMetadata } from "./coaching-modules";
+import { PaymentMethod, PaymentStatus } from "./payment";
 
 export type FlexibleStatus =
   | "Active"
@@ -20,7 +21,11 @@ export interface FlexibleMembershipRecord extends AuditMetadata {
   totalHours: number; // default 30
   hoursUsed: number;
   hoursRemaining: number;
+  planFee?: number;
   amountPaid: number;
+  dueAmount?: number;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
   status: FlexibleStatus;
   remarks?: string;
   additionalMembers: LinkedMember[];

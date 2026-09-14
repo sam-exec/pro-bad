@@ -17,6 +17,7 @@ import {
 import { MembershipRecord } from "@/types/membership";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
 import { PaymentBadge } from "@/components/kids-coaching/payment-badge";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { Button } from "@/components/ui/button";
 
 interface MembershipDetailsDrawerProps {
@@ -157,7 +158,11 @@ export function MembershipDetailsDrawer({
                   ₹{membership.dueAmount}
                 </p>
               </div>
-              <div className="col-span-3 pt-2 flex items-center justify-between">
+              <div className="col-span-3 pt-2 flex items-center justify-between border-t border-slate-200/60">
+                <span className="text-slate-500 font-medium">Payment Method:</span>
+                <PaymentMethodBadge method={membership.paymentMethod} />
+              </div>
+              <div className="col-span-3 pt-1 flex items-center justify-between">
                 <span className="text-slate-500 font-medium">Payment Status:</span>
                 <PaymentBadge status={membership.paymentStatus} />
               </div>
