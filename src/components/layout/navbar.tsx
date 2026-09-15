@@ -8,7 +8,7 @@ export function Navbar() {
         <Link
           href="/"
           className="transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 rounded-lg"
-          aria-label="Employee Management System Home"
+          aria-label="Academy Management Portal Home"
         >
           <Logo size="sm" />
         </Link>

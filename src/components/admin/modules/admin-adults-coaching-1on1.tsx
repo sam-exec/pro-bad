@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Plus, Users, Medal, DollarSign, Calendar, Eye, Edit2, X } from "lucide-react";
+import React, { useState, useMemo, useRef } from "react";
+import { Plus, Users, Medal, DollarSign, Calendar, Eye, Edit2, X, AlertCircle } from "lucide-react";
 import { Adult1on1Member, SESSION_PACKAGES, TIMING_SLOTS_1ON1 } from "@/types/coaching-modules";
 import { COACHES, Gender, StudentStatus, PaymentStatus } from "@/types/kids-coaching";
 import { PaymentMethod } from "@/types/payment";
@@ -58,22 +58,40 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
   const [viewingMember, setViewingMember] = useState<Adult1on1Member | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [memberToEdit, setMemberToEdit] = useState<Adult1on1Member | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    memberName: string;
+    mobileNumber: string;
+    age: number | "";
+    gender: Gender;
+    coach: string;
+    preferredTiming: string;
+    sessionPackage: string;
+    totalSessions: number | "";
+    feeAmount: number | "";
+    paidAmount: number | "";
+    paymentStatus: PaymentStatus;
+    paymentMethod: PaymentMethod;
+    joiningDate: string;
+    status: StudentStatus;
+  }>({
     memberName: "",
     mobileNumber: "",
-    age: 30,
-    gender: "Male" as Gender,
-    coach: COACHES[0] as string,
-    preferredTiming: TIMING_SLOTS_1ON1[0] as string,
-    sessionPackage: SESSION_PACKAGES[0] as string,
+    age: "",
+    gender: "Male",
+    coach: COACHES[0],
+    preferredTiming: TIMING_SLOTS_1ON1[0],
+    sessionPackage: SESSION_PACKAGES[0],
     totalSessions: 12,
-    feeAmount: 350,
-    paidAmount: 350,
-    paymentStatus: "Paid" as PaymentStatus,
-    paymentMethod: "UPI" as PaymentMethod,
+    feeAmount: "",
+    paidAmount: "",
+    paymentStatus: "Paid",
+    paymentMethod: "UPI",
     joiningDate: "2026-03-01",
-    status: "Active" as StudentStatus,
+    status: "Active",
   });
 
   const filteredMembers = useMemo(() => {
@@ -133,17 +151,18 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
 
   const handleOpenAdd = () => {
     setMemberToEdit(null);
+    setFormError(null);
     setFormData({
       memberName: "",
       mobileNumber: "",
-      age: 30,
+      age: "",
       gender: "Male",
       coach: COACHES[0],
       preferredTiming: TIMING_SLOTS_1ON1[0],
       sessionPackage: SESSION_PACKAGES[0],
       totalSessions: 12,
-      feeAmount: 350,
-      paidAmount: 350,
+      feeAmount: "",
+      paidAmount: "",
       paymentStatus: "Paid",
       paymentMethod: "UPI",
       joiningDate: new Date().toISOString().split("T")[0],
@@ -154,6 +173,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
 
   const handleOpenEdit = (m: Adult1on1Member) => {
     setMemberToEdit(m);
+    setFormError(null);
     setFormData({
       memberName: m.memberName,
       mobileNumber: m.mobileNumber,
@@ -173,50 +193,85 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
     setIsFormOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
+    if (!formData.memberName.trim()) {
+      setFormError("Player name is required.");
+      return;
+    }
+    const cleanPhone = formData.mobileNumber.replace(/\D/g, "");
+    if (!formData.mobileNumber.trim() || cleanPhone.length !== 10) {
+      setFormError("A valid 10-digit mobile number is required.");
+      return;
+    }
+
     const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
     const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
-    const dueAmount = Math.max(0, formData.feeAmount - formData.paidAmount);
+    const fee = Number(formData.feeAmount) || 0;
+    const paid = Number(formData.paidAmount) || 0;
+    const dueAmount = Math.max(0, fee - paid);
     const paymentStatus: PaymentStatus =
-      dueAmount === 0 && formData.paidAmount > 0
+      dueAmount === 0 && paid > 0
         ? "Paid"
-        : formData.paidAmount > 0
+        : paid > 0
         ? "Partial"
         : "Pending";
+    const numAge = Number(formData.age) || 25;
+    const numTotal = Number(formData.totalSessions) || 12;
 
-    if (memberToEdit) {
-      adultsService.update1on1(
-        memberToEdit.id,
-        {
-          ...formData,
-          dueAmount,
-          paymentStatus,
-        },
-        "ADM001"
-      );
-    } else {
-      adultsService.create1on1(
-        {
-          ...formData,
-          dueAmount,
-          paymentStatus,
-          month: "March",
-          year: selectedYear,
-          sessionsCompleted: 0,
-          sessionsRemaining: formData.totalSessions,
-        },
-        {
-          branchId: targetBranchId,
-          branchName: targetBranchName,
-          employeeId: "ADM001",
-          employeeName: "Super Admin",
-        }
-      );
+    try {
+      setIsSubmitting(true);
+      if (memberToEdit) {
+        await adultsService.update1on1(
+          memberToEdit.id,
+          {
+            ...formData,
+            age: numAge,
+            totalSessions: numTotal,
+            feeAmount: fee,
+            paidAmount: paid,
+            dueAmount,
+            paymentStatus,
+          },
+          "ADM001"
+        );
+      } else {
+        await adultsService.create1on1(
+          {
+            ...formData,
+            age: numAge,
+            totalSessions: numTotal,
+            feeAmount: fee,
+            paidAmount: paid,
+            dueAmount,
+            paymentStatus,
+            month: "March",
+            year: selectedYear,
+            sessionsCompleted: 0,
+            sessionsRemaining: numTotal,
+          },
+          {
+            branchId: targetBranchId,
+            branchName: targetBranchName,
+            employeeId: "ADM001",
+            employeeName: "Super Admin",
+          }
+        );
+      }
+      setMembers(adultsService.getSnapshot1on1());
+      setIsFormOpen(false);
+      setMemberToEdit(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save player. Please try again.";
+      setFormError(msg);
+      if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-    setMembers(adultsService.getSnapshot1on1());
-    setIsFormOpen(false);
-    setMemberToEdit(null);
   };
 
   return (
@@ -534,7 +589,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                 </button>
               </div>
 
-              <form onSubmit={handleSave} className="space-y-3.5 text-xs">
+              <form ref={formRef} noValidate onSubmit={handleSave} className="space-y-3.5 text-xs">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs">Player Name</Label>
@@ -602,7 +657,15 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                     <Input
                       type="number"
                       value={formData.feeAmount}
-                      onChange={(e) => setFormData({ ...formData, feeAmount: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          feeAmount:
+                            e.target.value === ""
+                              ? ""
+                              : Math.max(0, parseInt(e.target.value, 10) || 0),
+                        })
+                      }
                       className="h-9 mt-1 text-xs"
                     />
                   </div>
@@ -612,12 +675,17 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                       type="number"
                       value={formData.paidAmount}
                       onChange={(e) => {
-                        const paid = Number(e.target.value);
-                        const due = formData.feeAmount - paid;
+                        const val =
+                          e.target.value === ""
+                            ? ""
+                            : Math.max(0, parseInt(e.target.value, 10) || 0);
+                        const paidNum = val === "" ? 0 : val;
+                        const feeNum = formData.feeAmount === "" ? 0 : formData.feeAmount;
+                        const due = feeNum - paidNum;
                         setFormData({
                           ...formData,
-                          paidAmount: paid,
-                          paymentStatus: due <= 0 ? "Paid" : paid > 0 ? "Partial" : "Pending",
+                          paidAmount: val,
+                          paymentStatus: due <= 0 ? "Paid" : paidNum > 0 ? "Partial" : "Pending",
                         });
                       }}
                       className="h-9 mt-1 text-xs"
@@ -636,6 +704,13 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                   </div>
                 </div>
 
+                {formError && (
+                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    <span>{formError}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200">
                   <Button
                     type="button"
@@ -645,8 +720,12 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
-                    {memberToEdit ? "Update Player" : "Save Player"}
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    {isSubmitting ? "Saving..." : memberToEdit ? "Update Player" : "Save Player"}
                   </Button>
                 </div>
               </form>

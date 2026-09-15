@@ -61,12 +61,12 @@ export function AdminAdultsCoaching({ selectedBranch }: AdminAdultsCoachingProps
   const [formData, setFormData] = useState({
     memberName: "",
     mobileNumber: "",
-    age: 28,
+    age: "" as unknown as number,
     gender: "Male" as Gender,
     batch: ADULT_BATCHES[0] as string,
     coach: COACHES[0] as string,
-    monthlyFee: 180,
-    paidAmount: 180,
+    monthlyFee: "" as unknown as number,
+    paidAmount: "" as unknown as number,
     paymentMethod: "UPI" as PaymentMethod,
     joiningDate: "2026-03-01",
     status: "Active" as StudentStatus,
@@ -132,12 +132,12 @@ export function AdminAdultsCoaching({ selectedBranch }: AdminAdultsCoachingProps
     setFormData({
       memberName: "",
       mobileNumber: "",
-      age: 28,
+      age: "" as unknown as number,
       gender: "Male",
       batch: ADULT_BATCHES[0],
       coach: COACHES[0],
-      monthlyFee: 180,
-      paidAmount: 180,
+      monthlyFee: "" as unknown as number,
+      paidAmount: "" as unknown as number,
       paymentMethod: "UPI",
       joiningDate: new Date().toISOString().split("T")[0],
       status: "Active",
@@ -163,32 +163,40 @@ export function AdminAdultsCoaching({ selectedBranch }: AdminAdultsCoachingProps
     setIsFormOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
     const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
-    const dueAmount = Math.max(0, formData.monthlyFee - formData.paidAmount);
+    const numFee = Number(formData.monthlyFee) || 0;
+    const numPaid = Number(formData.paidAmount) || 0;
+    const dueAmount = Math.max(0, numFee - numPaid);
     const paymentStatus: PaymentStatus =
-      dueAmount === 0 && formData.paidAmount > 0
+      dueAmount === 0 && numPaid > 0
         ? "Paid"
-        : formData.paidAmount > 0
+        : numPaid > 0
         ? "Partial"
         : "Pending";
 
     if (memberToEdit) {
-      adultsService.update(
+      await adultsService.update(
         memberToEdit.id,
         {
           ...formData,
+          monthlyFee: numFee,
+          paidAmount: numPaid,
+          age: Number(formData.age) || 25,
           dueAmount,
           paymentStatus,
         },
         "ADM001"
       );
     } else {
-      adultsService.create(
+      await adultsService.create(
         {
           ...formData,
+          monthlyFee: numFee,
+          paidAmount: numPaid,
+          age: Number(formData.age) || 25,
           dueAmount,
           paymentStatus,
           currentMonth: "March",
@@ -565,8 +573,15 @@ export function AdminAdultsCoaching({ selectedBranch }: AdminAdultsCoachingProps
                     <Label className="text-xs">Monthly Fee (₹)</Label>
                     <Input
                       type="number"
-                      value={formData.monthlyFee}
-                      onChange={(e) => setFormData({ ...formData, monthlyFee: Number(e.target.value) })}
+                      value={formData.monthlyFee === ("" as unknown) ? "" : formData.monthlyFee}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({
+                          ...formData,
+                          monthlyFee: val === "" ? ("" as unknown as number) : Math.max(0, parseInt(val, 10) || 0),
+                        });
+                      }}
+                      placeholder="e.g. 2000"
                       className="h-9 mt-1 text-xs"
                     />
                   </div>
@@ -574,8 +589,15 @@ export function AdminAdultsCoaching({ selectedBranch }: AdminAdultsCoachingProps
                     <Label className="text-xs">Paid Amount (₹)</Label>
                     <Input
                       type="number"
-                      value={formData.paidAmount}
-                      onChange={(e) => setFormData({ ...formData, paidAmount: Number(e.target.value) })}
+                      value={formData.paidAmount === ("" as unknown) ? "" : formData.paidAmount}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({
+                          ...formData,
+                          paidAmount: val === "" ? ("" as unknown as number) : Math.max(0, parseInt(val, 10) || 0),
+                        });
+                      }}
+                      placeholder="e.g. 2000"
                       className="h-9 mt-1 text-xs"
                     />
                   </div>

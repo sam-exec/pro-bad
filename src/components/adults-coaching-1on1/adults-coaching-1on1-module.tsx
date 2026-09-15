@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   Plus,
   Users,
@@ -9,6 +9,7 @@ import {
   X,
   Phone,
   Calendar,
+  AlertCircle,
 } from "lucide-react";
 import {
   Adult1on1Member,
@@ -43,58 +44,63 @@ export function AdultsCoaching1on1Module() {
   const [viewingMember, setViewingMember] = useState<Adult1on1Member | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [memberToEdit, setMemberToEdit] = useState<Adult1on1Member | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Form Fields
   const [memberName, setMemberName] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
-  const [age, setAge] = useState<number>(30);
+  const [age, setAge] = useState<number | "">("");
   const [gender, setGender] = useState<Gender>("Male");
   const [coach, setCoach] = useState<string>(COACHES[0]);
   const [preferredTiming, setPreferredTiming] = useState<string>(TIMING_SLOTS_1ON1[0]);
   const [sessionPackage, setSessionPackage] = useState<string>(SESSION_PACKAGES[0]);
-  const [totalSessions, setTotalSessions] = useState<number>(8);
-  const [sessionsCompleted, setSessionsCompleted] = useState<number>(0);
-  const [feeAmount, setFeeAmount] = useState<number>(350);
-  const [paidAmount, setPaidAmount] = useState<number>(350);
+  const [totalSessions, setTotalSessions] = useState<number | "">("");
+  const [sessionsCompleted, setSessionsCompleted] = useState<number | "">("");
+  const [feeAmount, setFeeAmount] = useState<number | "">("");
+  const [paidAmount, setPaidAmount] = useState<number | "">("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
   const [status, setStatus] = useState<StudentStatus>("Active");
   const [remarks, setRemarks] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (memberToEdit) {
       setMemberName(memberToEdit.memberName);
       setMobileNumber(memberToEdit.mobileNumber);
-      setAge(memberToEdit.age);
+      setAge(memberToEdit.age ?? "");
       setGender(memberToEdit.gender);
       setCoach(memberToEdit.coach);
       setPreferredTiming(memberToEdit.preferredTiming);
       setSessionPackage(memberToEdit.sessionPackage);
-      setTotalSessions(memberToEdit.totalSessions);
-      setSessionsCompleted(memberToEdit.sessionsCompleted);
-      setFeeAmount(memberToEdit.feeAmount);
-      setPaidAmount(memberToEdit.paidAmount);
+      setTotalSessions(memberToEdit.totalSessions ?? "");
+      setSessionsCompleted(memberToEdit.sessionsCompleted ?? "");
+      setFeeAmount(memberToEdit.feeAmount ?? "");
+      setPaidAmount(memberToEdit.paidAmount ?? "");
       setPaymentMethod(memberToEdit.paymentMethod || "UPI");
       setStatus(memberToEdit.status);
       setRemarks(memberToEdit.remarks || "");
     } else {
       setMemberName("");
       setMobileNumber("");
-      setAge(30);
+      setAge("");
       setGender("Male");
       setCoach(COACHES[0]);
       setPreferredTiming(TIMING_SLOTS_1ON1[0]);
       setSessionPackage(SESSION_PACKAGES[0]);
       setTotalSessions(8);
       setSessionsCompleted(0);
-      setFeeAmount(350);
-      setPaidAmount(350);
+      setFeeAmount("");
+      setPaidAmount("");
       setPaymentMethod("UPI");
       setStatus("Active");
       setRemarks("");
     }
     setErrors({});
+    setFormError("");
+    setIsSubmitting(false);
   }, [memberToEdit, isFormOpen]);
 
   // Search by Mobile Number + Branch Isolation
@@ -116,100 +122,125 @@ export function AdultsCoaching1on1Module() {
   // Save / Edit Handler
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
 
     const newErrors: Record<string, string> = {};
-    if (!memberName.trim()) newErrors.memberName = "Member name is required.";
+    if (!memberName.trim()) newErrors.m1Name = "Member name is required.";
     if (!mobileNumber.trim() || !/^\d{10}$/.test(mobileNumber.replace(/\D/g, ""))) {
-      newErrors.mobileNumber = "Enter a valid 10-digit mobile number.";
+      newErrors.m1Phone = "Enter a valid 10-digit mobile number.";
     }
-    if (age <= 16) newErrors.age = "Adult member must be 16+.";
-    if (feeAmount < 0) newErrors.feeAmount = "Fee cannot be negative.";
-    if (paidAmount > 0 && !paymentMethod) {
+    if (age === "" || Number(age) < 16) newErrors.m1Age = "Adult member must be 16+.";
+    if (feeAmount === "" || Number(feeAmount) < 0) newErrors.m1Fee = "Fee amount is required.";
+    if (paidAmount !== "" && Number(paidAmount) > 0 && !paymentMethod) {
       newErrors.paymentMethod = "Payment method is required when paid amount > 0.";
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setFormError("Please fill in all required fields highlighted in red.");
+      const firstId = Object.keys(newErrors)[0];
+      const el = document.getElementById(firstId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus();
+      } else if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
       return;
     }
 
-    const dueAmount = Math.max(0, feeAmount - paidAmount);
+    const numFee = feeAmount === "" ? 0 : Number(feeAmount);
+    const numPaid = paidAmount === "" ? 0 : Number(paidAmount);
+    const dueAmount = Math.max(0, numFee - numPaid);
     const paymentStatus =
-      dueAmount === 0 && paidAmount > 0
+      dueAmount === 0 && numPaid > 0
         ? "Paid"
-        : paidAmount > 0 && dueAmount > 0
+        : numPaid > 0 && dueAmount > 0
         ? "Partial"
         : "Pending";
-    const sessionsRemaining = Math.max(0, totalSessions - sessionsCompleted);
-    const now = new Date().toISOString();
+    const numTotal = Number(totalSessions) || 8;
+    const numComp = Number(sessionsCompleted) || 0;
+    const sessionsRemaining = Math.max(0, numTotal - numComp);
 
-    if (memberToEdit) {
-      const updated = await adultsService.update1on1(
-        memberToEdit.id,
-        {
-          memberName: memberName.trim(),
-          mobileNumber: mobileNumber.trim(),
-          age: Number(age),
-          gender,
-          coach,
-          preferredTiming,
-          sessionPackage,
-          totalSessions: Number(totalSessions),
-          sessionsCompleted: Number(sessionsCompleted),
-          sessionsRemaining,
-          feeAmount: Number(feeAmount),
-          paidAmount: Number(paidAmount),
-          dueAmount,
-          paymentStatus,
-          paymentMethod,
-          status,
-          remarks: remarks.trim(),
-        },
-        employeeId
-      );
+    try {
+      setIsSubmitting(true);
+      if (memberToEdit) {
+        const updated = await adultsService.update1on1(
+          memberToEdit.id,
+          {
+            memberName: memberName.trim(),
+            mobileNumber: mobileNumber.trim(),
+            age: Number(age),
+            gender,
+            coach,
+            preferredTiming,
+            sessionPackage,
+            totalSessions: numTotal,
+            sessionsCompleted: numComp,
+            sessionsRemaining,
+            feeAmount: numFee,
+            paidAmount: numPaid,
+            dueAmount,
+            paymentStatus,
+            paymentMethod,
+            status,
+            remarks: remarks.trim(),
+          },
+          employeeId
+        );
 
-      setMembers((prev) =>
-        prev.map((item) => (item.id === memberToEdit.id ? updated : item))
-      );
-      if (viewingMember?.id === memberToEdit.id) {
-        setViewingMember(updated);
-      }
-    } else {
-      const created = await adultsService.create1on1(
-        {
-          memberName: memberName.trim(),
-          mobileNumber: mobileNumber.trim(),
-          age: Number(age),
-          gender,
-          coach,
-          preferredTiming,
-          sessionPackage,
-          totalSessions: Number(totalSessions),
-          sessionsCompleted: Number(sessionsCompleted),
-          sessionsRemaining,
-          feeAmount: Number(feeAmount),
-          paidAmount: Number(paidAmount),
-          dueAmount,
-          paymentStatus,
-          paymentMethod,
-          joiningDate: new Date().toISOString().split("T")[0],
-          month: "March",
-          year: 2026,
-          status,
-          remarks: remarks.trim(),
-        },
-        {
-          branchId: currentBranch.id,
-          branchName: currentBranch.name,
-          employeeId,
-          employeeName,
+        setMembers((prev) =>
+          prev.map((item) => (item.id === memberToEdit.id ? updated : item))
+        );
+        if (viewingMember?.id === memberToEdit.id) {
+          setViewingMember(updated);
         }
-      );
-      setMembers((prev) => [created, ...prev]);
-    }
+      } else {
+        const created = await adultsService.create1on1(
+          {
+            memberName: memberName.trim(),
+            mobileNumber: mobileNumber.trim(),
+            age: Number(age),
+            gender,
+            joiningDate: new Date().toISOString().split("T")[0],
+            coach,
+            preferredTiming,
+            sessionPackage,
+            totalSessions: numTotal,
+            sessionsCompleted: numComp,
+            sessionsRemaining,
+            feeAmount: numFee,
+            paidAmount: numPaid,
+            dueAmount,
+            paymentStatus,
+            paymentMethod,
+            month: "March",
+            year: 2026,
+            status,
+            remarks: remarks.trim(),
+          },
+          {
+            branchId: currentBranch.id,
+            branchName: currentBranch.name,
+            employeeId,
+            employeeName,
+          }
+        );
 
-    setIsFormOpen(false);
-    setMemberToEdit(null);
+        setMembers((prev) => [created, ...prev]);
+      }
+
+      setIsFormOpen(false);
+      setMemberToEdit(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save member. Please try again.";
+      setFormError(msg);
+      if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -638,7 +669,7 @@ export function AdultsCoaching1on1Module() {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-4">
+            <form ref={formRef} noValidate onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="m1Name" required>Member Name</Label>
@@ -668,8 +699,16 @@ export function AdultsCoaching1on1Module() {
                       id="m1Age"
                       type="number"
                       value={age}
-                      onChange={(e) => setAge(Number(e.target.value))}
+                      onChange={(e) =>
+                        setAge(
+                          e.target.value === ""
+                            ? ""
+                            : Math.max(0, parseInt(e.target.value, 10) || 0)
+                        )
+                      }
+                      hasError={Boolean(errors.age)}
                     />
+                    {errors.age && <p className="text-xs text-red-600">{errors.age}</p>}
                   </div>
                   <div>
                     <Label htmlFor="m1Gen" required>Gender</Label>
@@ -729,7 +768,13 @@ export function AdultsCoaching1on1Module() {
                       id="m1Tot"
                       type="number"
                       value={totalSessions}
-                      onChange={(e) => setTotalSessions(Number(e.target.value))}
+                      onChange={(e) =>
+                        setTotalSessions(
+                          e.target.value === ""
+                            ? ""
+                            : Math.max(0, parseInt(e.target.value, 10) || 0)
+                        )
+                      }
                     />
                   </div>
                   <div>
@@ -738,7 +783,13 @@ export function AdultsCoaching1on1Module() {
                       id="m1Comp"
                       type="number"
                       value={sessionsCompleted}
-                      onChange={(e) => setSessionsCompleted(Number(e.target.value))}
+                      onChange={(e) =>
+                        setSessionsCompleted(
+                          e.target.value === ""
+                            ? ""
+                            : Math.max(0, parseInt(e.target.value, 10) || 0)
+                        )
+                      }
                     />
                   </div>
                 </div>
@@ -748,7 +799,13 @@ export function AdultsCoaching1on1Module() {
                     id="m1Fee"
                     type="number"
                     value={feeAmount}
-                    onChange={(e) => setFeeAmount(Number(e.target.value))}
+                    onChange={(e) =>
+                      setFeeAmount(
+                        e.target.value === ""
+                          ? ""
+                          : Math.max(0, parseInt(e.target.value, 10) || 0)
+                      )
+                    }
                   />
                 </div>
                 <div>
@@ -757,11 +814,17 @@ export function AdultsCoaching1on1Module() {
                     id="m1Paid"
                     type="number"
                     value={paidAmount}
-                    onChange={(e) => setPaidAmount(Number(e.target.value))}
+                    onChange={(e) =>
+                      setPaidAmount(
+                        e.target.value === ""
+                          ? ""
+                          : Math.max(0, parseInt(e.target.value, 10) || 0)
+                      )
+                    }
                   />
                 </div>
                 <div>
-                  <Label htmlFor="paymentMethod" required={paidAmount > 0}>Payment Method</Label>
+                  <Label htmlFor="paymentMethod" required={Number(paidAmount) > 0}>Payment Method</Label>
                   <select
                     id="paymentMethod"
                     value={paymentMethod}
@@ -796,10 +859,17 @@ export function AdultsCoaching1on1Module() {
                 </div>
               </div>
 
+              {formError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
               <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
-                  {memberToEdit ? "Update Member" : "Save Member"}
+                <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  {isSubmitting ? "Saving..." : memberToEdit ? "Update Member" : "Save Member"}
                 </Button>
               </div>
             </form>

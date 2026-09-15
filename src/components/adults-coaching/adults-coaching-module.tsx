@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   Plus,
   Users,
@@ -9,6 +9,7 @@ import {
   X,
   Phone,
   Calendar,
+  AlertCircle,
 } from "lucide-react";
 import {
   AdultCoachMember,
@@ -42,35 +43,38 @@ export function AdultsCoachingModule() {
   const [viewingMember, setViewingMember] = useState<AdultCoachMember | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [memberToEdit, setMemberToEdit] = useState<AdultCoachMember | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Form Fields
   const [memberName, setMemberName] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
-  const [age, setAge] = useState<number>(30);
+  const [age, setAge] = useState<number | "">("");
   const [gender, setGender] = useState<Gender>("Male");
   const [joiningDate, setJoiningDate] = useState("2026-03-01");
   const [batch, setBatch] = useState<string>(ADULT_BATCHES[0]);
   const [coach, setCoach] = useState<string>(COACHES[0]);
-  const [monthlyFee, setMonthlyFee] = useState<number>(200);
-  const [paidAmount, setPaidAmount] = useState<number>(200);
+  const [monthlyFee, setMonthlyFee] = useState<number | "">("");
+  const [paidAmount, setPaidAmount] = useState<number | "">("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
   const [currentMonth, setCurrentMonth] = useState<string>("March");
   const [status, setStatus] = useState<StudentStatus>("Active");
   const [remarks, setRemarks] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (memberToEdit) {
       setMemberName(memberToEdit.memberName);
       setMobileNumber(memberToEdit.mobileNumber);
-      setAge(memberToEdit.age);
+      setAge(memberToEdit.age ?? "");
       setGender(memberToEdit.gender);
       setJoiningDate(memberToEdit.joiningDate);
       setBatch(memberToEdit.batch);
       setCoach(memberToEdit.coach);
-      setMonthlyFee(memberToEdit.monthlyFee);
-      setPaidAmount(memberToEdit.paidAmount);
+      setMonthlyFee(memberToEdit.monthlyFee ?? "");
+      setPaidAmount(memberToEdit.paidAmount ?? "");
       setPaymentMethod(memberToEdit.paymentMethod || "UPI");
       setCurrentMonth(memberToEdit.currentMonth);
       setStatus(memberToEdit.status);
@@ -78,19 +82,21 @@ export function AdultsCoachingModule() {
     } else {
       setMemberName("");
       setMobileNumber("");
-      setAge(30);
+      setAge("");
       setGender("Male");
       setJoiningDate(new Date().toISOString().split("T")[0]);
       setBatch(ADULT_BATCHES[0]);
       setCoach(COACHES[0]);
-      setMonthlyFee(200);
-      setPaidAmount(200);
+      setMonthlyFee("");
+      setPaidAmount("");
       setPaymentMethod("UPI");
       setCurrentMonth("March");
       setStatus("Active");
       setRemarks("");
     }
     setErrors({});
+    setFormError("");
+    setIsSubmitting(false);
   }, [memberToEdit, isFormOpen]);
 
   // Search by Mobile Number + Branch Isolation
@@ -112,93 +118,116 @@ export function AdultsCoachingModule() {
   // Save / Edit Handler
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
 
     const newErrors: Record<string, string> = {};
     if (!memberName.trim()) newErrors.memberName = "Member name is required.";
     if (!mobileNumber.trim() || !/^\d{10}$/.test(mobileNumber.replace(/\D/g, ""))) {
       newErrors.mobileNumber = "Enter a valid 10-digit mobile number.";
     }
-    if (age <= 16) newErrors.age = "Adult members must be 16+.";
-    if (monthlyFee < 0) newErrors.monthlyFee = "Fee cannot be negative.";
-    if (paidAmount > 0 && !paymentMethod) {
+    if (age === "" || Number(age) < 16) newErrors.age = "Adult members must be 16+.";
+    if (monthlyFee === "" || Number(monthlyFee) < 0) newErrors.monthlyFee = "Monthly fee is required.";
+    if (paidAmount !== "" && Number(paidAmount) > 0 && !paymentMethod) {
       newErrors.paymentMethod = "Payment method is required when paid amount > 0.";
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setFormError("Please fill in all required fields highlighted in red.");
+      const firstId = Object.keys(newErrors)[0];
+      const el = document.getElementById(firstId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus();
+      } else if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
       return;
     }
 
-    const dueAmount = Math.max(0, monthlyFee - paidAmount);
+    const numFee = monthlyFee === "" ? 0 : Number(monthlyFee);
+    const numPaid = paidAmount === "" ? 0 : Number(paidAmount);
+    const dueAmount = Math.max(0, numFee - numPaid);
     const paymentStatus =
-      dueAmount === 0 && paidAmount > 0
+      dueAmount === 0 && numPaid > 0
         ? "Paid"
-        : paidAmount > 0 && dueAmount > 0
+        : numPaid > 0 && dueAmount > 0
         ? "Partial"
         : "Pending";
-    const now = new Date().toISOString();
 
-    if (memberToEdit) {
-      const updated = await adultsService.update(
-        memberToEdit.id,
-        {
-          memberName: memberName.trim(),
-          mobileNumber: mobileNumber.trim(),
-          age: Number(age),
-          gender,
-          joiningDate,
-          batch,
-          coach,
-          monthlyFee: Number(monthlyFee),
-          paidAmount: Number(paidAmount),
-          dueAmount,
-          paymentStatus,
-          paymentMethod,
-          currentMonth,
-          status,
-          remarks: remarks.trim(),
-        },
-        employeeId
-      );
+    try {
+      setIsSubmitting(true);
+      if (memberToEdit) {
+        const updated = await adultsService.update(
+          memberToEdit.id,
+          {
+            memberName: memberName.trim(),
+            mobileNumber: mobileNumber.trim(),
+            age: Number(age),
+            gender,
+            joiningDate,
+            batch,
+            coach,
+            monthlyFee: numFee,
+            paidAmount: numPaid,
+            dueAmount,
+            paymentStatus,
+            paymentMethod,
+            currentMonth,
+            status,
+            remarks: remarks.trim(),
+          },
+          employeeId
+        );
 
-      setMembers((prev) =>
-        prev.map((item) => (item.id === memberToEdit.id ? updated : item))
-      );
-      if (viewingMember?.id === memberToEdit.id) {
-        setViewingMember(updated);
-      }
-    } else {
-      const created = await adultsService.create(
-        {
-          memberName: memberName.trim(),
-          mobileNumber: mobileNumber.trim(),
-          age: Number(age),
-          gender,
-          joiningDate,
-          batch,
-          coach,
-          monthlyFee: Number(monthlyFee),
-          paidAmount: Number(paidAmount),
-          dueAmount,
-          paymentStatus,
-          paymentMethod,
-          currentMonth,
-          year: 2026,
-          status,
-          remarks: remarks.trim(),
-        },
-        {
-          branchId: currentBranch.id,
-          branchName: currentBranch.name,
-          employeeId,
-          employeeName,
+        setMembers((prev) =>
+          prev.map((item) => (item.id === memberToEdit.id ? updated : item))
+        );
+        if (viewingMember?.id === memberToEdit.id) {
+          setViewingMember(updated);
         }
-      );
-      setMembers((prev) => [created, ...prev]);
-    }
+      } else {
+        const created = await adultsService.create(
+          {
+            memberName: memberName.trim(),
+            mobileNumber: mobileNumber.trim(),
+            age: Number(age),
+            gender,
+            joiningDate,
+            batch,
+            coach,
+            monthlyFee: numFee,
+            paidAmount: numPaid,
+            dueAmount,
+            paymentStatus,
+            paymentMethod,
+            currentMonth,
+            year: 2026,
+            status,
+            remarks: remarks.trim(),
+          },
+          {
+            branchId: currentBranch.id,
+            branchName: currentBranch.name,
+            employeeId,
+            employeeName,
+          }
+        );
 
-    setIsFormOpen(false);
-    setMemberToEdit(null);
+        setMembers((prev) => [created, ...prev]);
+      }
+
+      setIsFormOpen(false);
+      setMemberToEdit(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save member. Please try again.";
+      setFormError(msg);
+      if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -597,7 +626,7 @@ export function AdultsCoachingModule() {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-4">
+            <form ref={formRef} noValidate onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="mName" required>Member Name</Label>
@@ -605,9 +634,10 @@ export function AdultsCoachingModule() {
                     id="mName"
                     value={memberName}
                     onChange={(e) => setMemberName(e.target.value)}
+                    placeholder="e.g. Rahul Sharma"
                     hasError={Boolean(errors.memberName)}
                   />
-                  {errors.memberName && <p className="text-xs text-red-600">{errors.memberName}</p>}
+                  {errors.memberName && <p className="text-xs text-red-600 mt-1">{errors.memberName}</p>}
                 </div>
                 <div>
                   <Label htmlFor="mPhone" required>Mobile Number</Label>
@@ -615,10 +645,11 @@ export function AdultsCoachingModule() {
                     id="mPhone"
                     value={mobileNumber}
                     onChange={(e) => setMobileNumber(e.target.value)}
+                    placeholder="e.g. 9876543210"
                     maxLength={10}
                     hasError={Boolean(errors.mobileNumber)}
                   />
-                  {errors.mobileNumber && <p className="text-xs text-red-600">{errors.mobileNumber}</p>}
+                  {errors.mobileNumber && <p className="text-xs text-red-600 mt-1">{errors.mobileNumber}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -627,8 +658,14 @@ export function AdultsCoachingModule() {
                       id="mAge"
                       type="number"
                       value={age}
-                      onChange={(e) => setAge(Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAge(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                      }}
+                      placeholder="e.g. 25"
+                      hasError={Boolean(errors.age)}
                     />
+                    {errors.age && <p className="text-xs text-red-600 mt-1">{errors.age}</p>}
                   </div>
                   <div>
                     <Label htmlFor="mGen" required>Gender</Label>
@@ -692,20 +729,30 @@ export function AdultsCoachingModule() {
                     id="mFee"
                     type="number"
                     value={monthlyFee}
-                    onChange={(e) => setMonthlyFee(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setMonthlyFee(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                    }}
+                    placeholder="e.g. 2000"
+                    hasError={Boolean(errors.monthlyFee)}
                   />
+                  {errors.monthlyFee && <p className="text-xs text-red-600 mt-1">{errors.monthlyFee}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="mPaid" required>Paid Amount (₹)</Label>
+                  <Label htmlFor="mPaid">Paid Amount (₹)</Label>
                   <Input
                     id="mPaid"
                     type="number"
                     value={paidAmount}
-                    onChange={(e) => setPaidAmount(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPaidAmount(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                    }}
+                    placeholder="e.g. 2000"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="paymentMethod" required={paidAmount > 0}>Payment Method</Label>
+                  <Label htmlFor="paymentMethod" required={Number(paidAmount) > 0}>Payment Method</Label>
                   <select
                     id="paymentMethod"
                     value={paymentMethod}
@@ -740,10 +787,33 @@ export function AdultsCoachingModule() {
                 </div>
               </div>
 
+              {/* Error Banner */}
+              {formError && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+                  <div className="flex-1 font-medium">{formError}</div>
+                </div>
+              )}
+
               <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
-                  {memberToEdit ? "Update Member" : "Save Member"}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsFormOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer font-semibold"
+                >
+                  {isSubmitting
+                    ? "Saving..."
+                    : memberToEdit
+                    ? "Update Member"
+                    : "Save Member"}
                 </Button>
               </div>
             </form>

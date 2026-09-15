@@ -102,14 +102,14 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
     return { total, active, hoursUsed, hoursRemaining };
   }, [filteredRecords]);
 
-  const handleSave = (recordData: Partial<FlexibleMembershipRecord>, idToEdit?: string) => {
+  const handleSave = async (recordData: Partial<FlexibleMembershipRecord>, idToEdit?: string) => {
     const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
     const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
 
     if (idToEdit) {
-      membershipService.updateFlexible(idToEdit, recordData, "ADM001");
+      await membershipService.updateFlexible(idToEdit, recordData, "ADM001");
     } else {
-      membershipService.createFlexible(recordData as any, {
+      await membershipService.createFlexible(recordData as any, {
         branchId: targetBranchId,
         branchName: targetBranchName,
         employeeId: "ADM001",

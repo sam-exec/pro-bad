@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Employee Management System",
+  title: "Academy Management Portal",
   description: "Secure portal for employees and administrators.",
 };
 

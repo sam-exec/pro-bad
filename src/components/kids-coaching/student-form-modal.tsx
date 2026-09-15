@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X, User, IndianRupee, Calendar, Info } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { X, User, IndianRupee, Calendar, AlertCircle } from "lucide-react";
 import {
   Student,
   StudentFormData,
@@ -21,7 +21,7 @@ interface StudentFormModalProps {
   isOpen: boolean;
   studentToEdit: Student | null;
   onClose: () => void;
-  onSave: (formData: StudentFormData, studentId?: string) => void;
+  onSave: (formData: StudentFormData, studentId?: string) => Promise<void> | void;
 }
 
 export function StudentFormModal({
@@ -31,29 +31,33 @@ export function StudentFormModal({
   onSave,
 }: StudentFormModalProps) {
   const isEditMode = Boolean(studentToEdit);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const [studentName, setStudentName] = useState("");
   const [parentName, setParentName] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
-  const [age, setAge] = useState<number>(8);
+  const [age, setAge] = useState<number | "">("");
   const [gender, setGender] = useState<Gender>("Male");
   const [joiningDate, setJoiningDate] = useState("2026-03-01");
   const [batch, setBatch] = useState<string>(BATCHES[0]);
   const [coach, setCoach] = useState<string>(COACHES[0]);
-  const [monthlyFee, setMonthlyFee] = useState<number>(150);
-  const [amountPaid, setAmountPaid] = useState<number>(150);
+  const [monthlyFee, setMonthlyFee] = useState<number | "">("");
+  const [amountPaid, setAmountPaid] = useState<number | "">("");
   const [currentMonth, setCurrentMonth] = useState<string>("March");
   const [year, setYear] = useState<number>(2026);
   const [status, setStatus] = useState<StudentStatus>("Active");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
   const [remarks, setRemarks] = useState("");
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
   const [errors, setErrors] = useState<{
     studentName?: string;
     parentName?: string;
     mobileNumber?: string;
     age?: string;
     monthlyFee?: string;
+    amountPaid?: string;
     paymentMethod?: string;
   }>({});
 
@@ -63,13 +67,13 @@ export function StudentFormModal({
       setStudentName(studentToEdit.studentName);
       setParentName(studentToEdit.parentName);
       setMobileNumber(studentToEdit.mobileNumber);
-      setAge(studentToEdit.age);
+      setAge(studentToEdit.age ?? "");
       setGender(studentToEdit.gender);
       setJoiningDate(studentToEdit.joiningDate);
       setBatch(studentToEdit.batch);
       setCoach(studentToEdit.coach);
-      setMonthlyFee(studentToEdit.monthlyFee);
-      setAmountPaid(studentToEdit.amountPaid);
+      setMonthlyFee(studentToEdit.monthlyFee ?? "");
+      setAmountPaid(studentToEdit.amountPaid ?? "");
       setCurrentMonth(studentToEdit.currentMonth);
       setYear(studentToEdit.year);
       setStatus(studentToEdit.status);
@@ -79,13 +83,13 @@ export function StudentFormModal({
       setStudentName("");
       setParentName("");
       setMobileNumber("");
-      setAge(9);
+      setAge("");
       setGender("Male");
       setJoiningDate(new Date().toISOString().split("T")[0]);
       setBatch(BATCHES[0]);
       setCoach(COACHES[0]);
-      setMonthlyFee(150);
-      setAmountPaid(150);
+      setMonthlyFee("");
+      setAmountPaid("");
       setCurrentMonth("March");
       setYear(2026);
       setStatus("Active");
@@ -93,21 +97,26 @@ export function StudentFormModal({
       setRemarks("");
     }
     setErrors({});
+    setFormError("");
+    setIsSubmitting(false);
   }, [studentToEdit, isOpen]);
 
   if (!isOpen) return null;
 
   // Live calculations
-  const calculatedDue = Math.max(0, monthlyFee - amountPaid);
+  const numFee = monthlyFee === "" ? 0 : Number(monthlyFee);
+  const numPaid = amountPaid === "" ? 0 : Number(amountPaid);
+  const calculatedDue = Math.max(0, numFee - numPaid);
   const computedPaymentStatus =
-    calculatedDue === 0 && amountPaid > 0
+    calculatedDue === 0 && numPaid > 0
       ? "Paid"
-      : amountPaid > 0 && calculatedDue > 0
+      : numPaid > 0 && calculatedDue > 0
       ? "Partial"
       : "Pending";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
 
     const newErrors: typeof errors = {};
     if (!studentName.trim()) newErrors.studentName = "Student name is required.";
@@ -117,14 +126,27 @@ export function StudentFormModal({
     } else if (!/^\d{10}$/.test(mobileNumber.replace(/\D/g, ""))) {
       newErrors.mobileNumber = "Enter a valid 10-digit mobile number.";
     }
-    if (age <= 0) newErrors.age = "Enter a valid age.";
-    if (monthlyFee < 0) newErrors.monthlyFee = "Monthly fee cannot be negative.";
-    if (amountPaid > 0 && !paymentMethod) {
+    if (age === "" || Number(age) <= 0) {
+      newErrors.age = "Please enter a valid age (greater than 0).";
+    }
+    if (monthlyFee === "" || Number(monthlyFee) < 0) {
+      newErrors.monthlyFee = "Monthly fee is required.";
+    }
+    if (amountPaid !== "" && Number(amountPaid) > 0 && !paymentMethod) {
       newErrors.paymentMethod = "Payment method is required when amount paid is greater than 0.";
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setFormError("Please fill in all required fields highlighted in red.");
+      const firstId = Object.keys(newErrors)[0];
+      const el = document.getElementById(firstId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus();
+      } else if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
       return;
     }
 
@@ -137,8 +159,8 @@ export function StudentFormModal({
       joiningDate,
       batch,
       coach,
-      monthlyFee: Number(monthlyFee),
-      amountPaid: Number(amountPaid),
+      monthlyFee: numFee,
+      amountPaid: numPaid,
       paymentMethod,
       currentMonth,
       year: Number(year),
@@ -146,8 +168,19 @@ export function StudentFormModal({
       remarks: remarks.trim(),
     };
 
-    onSave(payload, studentToEdit?.id);
-    onClose();
+    try {
+      setIsSubmitting(true);
+      await onSave(payload, studentToEdit?.id);
+      onClose();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save student. Please try again.";
+      setFormError(msg);
+      if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -186,7 +219,7 @@ export function StudentFormModal({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+        <form ref={formRef} noValidate onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Section: Personal Details */}
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
@@ -255,10 +288,12 @@ export function StudentFormModal({
                   <Input
                     id="age"
                     type="number"
-                    min={4}
-                    max={17}
                     value={age}
-                    onChange={(e) => setAge(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAge(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                    }}
+                    placeholder="e.g. 9"
                     hasError={Boolean(errors.age)}
                   />
                   {errors.age && (
@@ -375,9 +410,12 @@ export function StudentFormModal({
                 <Input
                   id="monthlyFee"
                   type="number"
-                  min={0}
                   value={monthlyFee}
-                  onChange={(e) => setMonthlyFee(Number(e.target.value))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setMonthlyFee(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                  }}
+                  placeholder="e.g. 3500"
                   hasError={Boolean(errors.monthlyFee)}
                 />
                 {errors.monthlyFee && (
@@ -386,21 +424,23 @@ export function StudentFormModal({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="amountPaid" required>
+                <Label htmlFor="amountPaid">
                   Amount Paid (₹)
                 </Label>
                 <Input
                   id="amountPaid"
                   type="number"
-                  min={0}
-                  max={monthlyFee}
                   value={amountPaid}
-                  onChange={(e) => setAmountPaid(Number(e.target.value))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAmountPaid(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                  }}
+                  placeholder="e.g. 3000"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="paymentMethod" required={amountPaid > 0}>
+                <Label htmlFor="paymentMethod" required={Number(amountPaid) > 0}>
                   Payment Method
                 </Label>
                 <select
@@ -472,6 +512,14 @@ export function StudentFormModal({
             />
           </div>
 
+          {/* Error Banner */}
+          {formError && (
+            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+              <div className="flex-1 font-medium">{formError}</div>
+            </div>
+          )}
+
           {/* Footer inside form */}
           <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
             <Button
@@ -479,14 +527,20 @@ export function StudentFormModal({
               variant="outline"
               onClick={onClose}
               className="h-11 px-6"
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              disabled={isSubmitting}
+              className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer"
             >
-              {isEditMode ? "Update Student" : "Save Student"}
+              {isSubmitting
+                ? "Saving..."
+                : isEditMode
+                ? "Update Student"
+                : "Save Student"}
             </Button>
           </div>
         </form>

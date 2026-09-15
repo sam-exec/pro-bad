@@ -1,7 +1,7 @@
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata = {
-  title: "Employee Login | Employee Management System",
+  title: "Employee Login | Academy Management Portal",
   description: "Sign in to access your workspace.",
 };
 

@@ -81,14 +81,15 @@ export function AdditionalMemberCard({
           <Input
             id={`mem-contrib-${member.id}`}
             type="number"
-            min={0}
             value={member.individualContribution}
-            onChange={(e) =>
+            onChange={(e) => {
+              const val = e.target.value;
               onChange({
                 ...member,
-                individualContribution: Number(e.target.value),
-              })
-            }
+                individualContribution: val === "" ? "" : Math.max(0, parseInt(val, 10) || 0),
+              });
+            }}
+            placeholder="e.g. 1000"
             className="h-10 text-xs mt-1"
           />
         </div>

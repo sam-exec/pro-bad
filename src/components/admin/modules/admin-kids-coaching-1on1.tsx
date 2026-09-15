@@ -77,14 +77,14 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
     studentName: "",
     parentName: "",
     parentMobile: "",
-    age: 9,
+    age: "" as unknown as number,
     gender: "Male" as Gender,
     coach: COACHES[0] as string,
     preferredTiming: TIMING_SLOTS_1ON1[0] as string,
     sessionPackage: SESSION_PACKAGES[0] as string,
-    totalSessions: 12,
-    feeAmount: 320,
-    amountPaid: 320,
+    totalSessions: 8,
+    feeAmount: "" as unknown as number,
+    amountPaid: "" as unknown as number,
     paymentStatus: "Paid" as PaymentStatus,
     paymentMethod: "UPI" as PaymentMethod,
     joiningDate: "2026-03-01",
@@ -156,14 +156,14 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
       studentName: "",
       parentName: "",
       parentMobile: "",
-      age: 9,
+      age: "" as unknown as number,
       gender: "Male",
       coach: COACHES[0],
       preferredTiming: TIMING_SLOTS_1ON1[0],
       sessionPackage: SESSION_PACKAGES[0],
-      totalSessions: 12,
-      feeAmount: 320,
-      amountPaid: 320,
+      totalSessions: 8,
+      feeAmount: "" as unknown as number,
+      amountPaid: "" as unknown as number,
       paymentStatus: "Paid",
       paymentMethod: "UPI",
       joiningDate: new Date().toISOString().split("T")[0],
@@ -194,25 +194,33 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
     setIsFormOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
     const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
-    const dueAmount = Math.max(0, formData.feeAmount - formData.amountPaid);
+    const numFee = Number(formData.feeAmount) || 0;
+    const numPaid = Number(formData.amountPaid) || 0;
+    const dueAmount = Math.max(0, numFee - numPaid);
 
     if (studentToEdit) {
-      kidsService.update1on1(
+      await kidsService.update1on1(
         studentToEdit.id,
         {
           ...formData,
+          feeAmount: numFee,
+          amountPaid: numPaid,
+          age: Number(formData.age) || 10,
           dueAmount,
         },
         "ADM001"
       );
     } else {
-      kidsService.create1on1(
+      await kidsService.create1on1(
         {
           ...formData,
+          feeAmount: numFee,
+          amountPaid: numPaid,
+          age: Number(formData.age) || 10,
           month: "March",
           year: selectedYear,
           dueAmount,
@@ -627,16 +635,20 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
                     <Label className="text-xs">Amount Paid (₹)</Label>
                     <Input
                       type="number"
-                      value={formData.amountPaid}
+                      value={formData.amountPaid === ("" as unknown) ? "" : formData.amountPaid}
                       onChange={(e) => {
-                        const paid = Number(e.target.value);
-                        const due = formData.feeAmount - paid;
+                        const val = e.target.value;
+                        const paid = val === "" ? ("" as unknown as number) : Math.max(0, parseInt(val, 10) || 0);
+                        const numFee = Number(formData.feeAmount) || 0;
+                        const numPaid = Number(paid) || 0;
+                        const due = numFee - numPaid;
                         setFormData({
                           ...formData,
                           amountPaid: paid,
-                          paymentStatus: due <= 0 ? "Paid" : paid > 0 ? "Partial" : "Pending",
+                          paymentStatus: due <= 0 ? "Paid" : numPaid > 0 ? "Partial" : "Pending",
                         });
                       }}
+                      placeholder="e.g. 2500"
                       className="h-9 mt-1 text-xs"
                     />
                   </div>

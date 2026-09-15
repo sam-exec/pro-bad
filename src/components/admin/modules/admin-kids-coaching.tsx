@@ -127,14 +127,14 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
     return { total, paidCount, totalDue, activeCount };
   }, [filteredStudents]);
 
-  const handleSaveStudent = (formData: StudentFormData, studentId?: string) => {
+  const handleSaveStudent = async (formData: StudentFormData, studentId?: string) => {
     const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
     const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
 
     if (studentId) {
-      kidsService.update(studentId, formData, "ADM001");
+      await kidsService.update(studentId, formData, "ADM001");
     } else {
-      kidsService.create(formData, {
+      await kidsService.create(formData, {
         branchId: targetBranchId,
         branchName: targetBranchName,
         employeeId: "ADM001",

@@ -6,7 +6,7 @@ export interface LinkedMember {
   memberId: string; // e.g. LM-001
   name: string;
   mobileNumber: string;
-  individualContribution: number;
+  individualContribution: number | "";
 }
 
 export interface MembershipRecord extends AuditMetadata {

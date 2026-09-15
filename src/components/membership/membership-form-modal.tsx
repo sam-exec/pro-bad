@@ -1,7 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X, Plus, UserCheck, ShieldCheck, Users } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  X,
+  Users,
+  UserCheck,
+  ShieldCheck,
+  Plus,
+  AlertCircle,
+} from "lucide-react";
 import {
   MembershipRecord,
   LinkedMember,
@@ -9,16 +16,16 @@ import {
 } from "@/types/membership";
 import { MONTHS, StudentStatus } from "@/types/kids-coaching";
 import { PaymentMethod } from "@/types/payment";
-import { AdditionalMemberCard } from "./additional-member-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AdditionalMemberCard } from "./additional-member-card";
 
 interface MembershipFormModalProps {
   isOpen: boolean;
   membershipToEdit: MembershipRecord | null;
   onClose: () => void;
-  onSave: (record: Partial<MembershipRecord>, idToEdit?: string) => void;
+  onSave: (record: Partial<MembershipRecord>, idToEdit?: string) => Promise<void> | void;
 }
 
 export function MembershipFormModal({
@@ -28,6 +35,7 @@ export function MembershipFormModal({
   onSave,
 }: MembershipFormModalProps) {
   const isEditMode = Boolean(membershipToEdit);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Primary Member Fields
   const [primaryMemberName, setPrimaryMemberName] = useState("");
@@ -37,8 +45,8 @@ export function MembershipFormModal({
   const [membershipPlan, setMembershipPlan] = useState<string>(MEMBERSHIP_PLANS[0]);
   const [joiningDate, setJoiningDate] = useState("2026-01-01");
   const [expiryDate, setExpiryDate] = useState("2026-12-31");
-  const [monthlyFee, setMonthlyFee] = useState<number>(600);
-  const [amountPaid, setAmountPaid] = useState<number>(600);
+  const [monthlyFee, setMonthlyFee] = useState<number | "">("");
+  const [amountPaid, setAmountPaid] = useState<number | "">("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
   const [currentMonth, setCurrentMonth] = useState<string>("March");
   const [status, setStatus] = useState<StudentStatus>("Active");
@@ -47,6 +55,8 @@ export function MembershipFormModal({
   // Additional Members (Section 2)
   const [additionalMembers, setAdditionalMembers] = useState<LinkedMember[]>([]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -58,8 +68,8 @@ export function MembershipFormModal({
       setMembershipPlan(membershipToEdit.membershipPlan);
       setJoiningDate(membershipToEdit.joiningDate);
       setExpiryDate(membershipToEdit.expiryDate);
-      setMonthlyFee(membershipToEdit.monthlyFee);
-      setAmountPaid(membershipToEdit.amountPaid);
+      setMonthlyFee(membershipToEdit.monthlyFee ?? "");
+      setAmountPaid(membershipToEdit.amountPaid ?? "");
       setPaymentMethod(membershipToEdit.paymentMethod || "UPI");
       setCurrentMonth(membershipToEdit.currentMonth);
       setStatus(membershipToEdit.status);
@@ -73,8 +83,8 @@ export function MembershipFormModal({
       setMembershipPlan(MEMBERSHIP_PLANS[1]);
       setJoiningDate("2026-01-01");
       setExpiryDate("2026-12-31");
-      setMonthlyFee(600);
-      setAmountPaid(600);
+      setMonthlyFee("");
+      setAmountPaid("");
       setPaymentMethod("UPI");
       setCurrentMonth("March");
       setStatus("Active");
@@ -82,6 +92,8 @@ export function MembershipFormModal({
       setAdditionalMembers([]);
     }
     setErrors({});
+    setFormError("");
+    setIsSubmitting(false);
   }, [membershipToEdit, isOpen]);
 
   if (!isOpen) return null;
@@ -94,7 +106,7 @@ export function MembershipFormModal({
       memberId: `LM-${String(newIdx).padStart(3, "0")}`,
       name: "",
       mobileNumber: "",
-      individualContribution: 0,
+      individualContribution: "",
     };
     setAdditionalMembers((prev) => [...prev, newMember]);
   };
@@ -111,39 +123,62 @@ export function MembershipFormModal({
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const numFee = monthlyFee === "" ? 0 : Number(monthlyFee);
+  const numPaid = amountPaid === "" ? 0 : Number(amountPaid);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
 
     const newErrors: Record<string, string> = {};
     if (!primaryMemberName.trim()) {
-      newErrors.primaryMemberName = "Primary member name is required.";
+      newErrors.priName = "Primary member name is required.";
     }
     if (
       !primaryMobileNumber.trim() ||
       !/^\d{10}$/.test(primaryMobileNumber.replace(/\D/g, ""))
     ) {
-      newErrors.primaryMobileNumber = "Enter a valid 10-digit primary mobile.";
+      newErrors.priMobile = "Enter a valid 10-digit primary mobile number.";
     }
     if (!address.trim()) {
-      newErrors.address = "Address is required.";
+      newErrors.priAddress = "Address is required.";
     }
-    if (monthlyFee < 0) {
-      newErrors.monthlyFee = "Fee cannot be negative.";
+    if (monthlyFee === "" || Number(monthlyFee) < 0) {
+      newErrors.priFee = "Total fee is required.";
     }
-    if (amountPaid > 0 && !paymentMethod) {
+    if (Number(amountPaid) > 0 && !paymentMethod) {
       newErrors.paymentMethod = "Payment method is required when amount paid > 0.";
     }
 
+    // Validate additional members
+    additionalMembers.forEach((m, idx) => {
+      if (!m.name.trim()) {
+        newErrors[`mem-name-${m.id}`] = `Additional Member ${idx + 1}: Name is required.`;
+      }
+      if (m.mobileNumber.trim() && !/^\d{10}$/.test(m.mobileNumber.replace(/\D/g, ""))) {
+        newErrors[`mem-phone-${m.id}`] = `Additional Member ${idx + 1}: Enter a valid 10-digit mobile.`;
+      }
+    });
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setFormError("Please fill in all required fields highlighted in red.");
+      const firstId = Object.keys(newErrors)[0];
+      const el = document.getElementById(firstId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus();
+      } else if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
       return;
     }
 
-    const dueAmount = Math.max(0, monthlyFee - amountPaid);
+    const dueAmount = Math.max(0, numFee - numPaid);
     const paymentStatus =
-      dueAmount === 0 && amountPaid > 0
+      dueAmount === 0 && numPaid > 0
         ? "Paid"
-        : amountPaid > 0 && dueAmount > 0
+        : numPaid > 0 && dueAmount > 0
         ? "Partial"
         : "Pending";
 
@@ -155,19 +190,33 @@ export function MembershipFormModal({
       membershipPlan,
       joiningDate,
       expiryDate,
-      monthlyFee: Number(monthlyFee),
-      amountPaid: Number(amountPaid),
+      monthlyFee: numFee,
+      amountPaid: numPaid,
       dueAmount,
       paymentStatus,
       paymentMethod,
       status,
       currentMonth,
       remarks: remarks.trim() || undefined,
-      additionalMembers,
+      additionalMembers: additionalMembers.map((m) => ({
+        ...m,
+        individualContribution: Number(m.individualContribution) || 0,
+      })),
     };
 
-    onSave(payload, membershipToEdit?.id);
-    onClose();
+    try {
+      setIsSubmitting(true);
+      await onSave(payload, membershipToEdit?.id);
+      onClose();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save membership. Please try again.";
+      setFormError(msg);
+      if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const totalMembersCount = 1 + additionalMembers.length;
@@ -208,7 +257,7 @@ export function MembershipFormModal({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-8">
+        <form ref={formRef} noValidate onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-8">
           {/* SECTION 1: Primary Member */}
           <div className="space-y-4">
             <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
@@ -230,10 +279,10 @@ export function MembershipFormModal({
                   value={primaryMemberName}
                   onChange={(e) => setPrimaryMemberName(e.target.value)}
                   placeholder="e.g. John Smith"
-                  hasError={Boolean(errors.primaryMemberName)}
+                  hasError={Boolean(errors.priName)}
                 />
-                {errors.primaryMemberName && (
-                  <p className="text-xs text-red-600">{errors.primaryMemberName}</p>
+                {errors.priName && (
+                  <p className="text-xs text-red-600 mt-1">{errors.priName}</p>
                 )}
               </div>
 
@@ -248,44 +297,44 @@ export function MembershipFormModal({
                   onChange={(e) => setPrimaryMobileNumber(e.target.value)}
                   placeholder="e.g. 9876543210"
                   maxLength={10}
-                  hasError={Boolean(errors.primaryMobileNumber)}
+                  hasError={Boolean(errors.priMobile)}
                 />
-                {errors.primaryMobileNumber && (
-                  <p className="text-xs text-red-600">{errors.primaryMobileNumber}</p>
+                {errors.priMobile && (
+                  <p className="text-xs text-red-600 mt-1">{errors.priMobile}</p>
                 )}
               </div>
 
-              {/* Email (Optional) */}
+              {/* Email */}
               <div>
-                <Label htmlFor="priEmail">Email Address (Optional)</Label>
+                <Label htmlFor="priEmail">Email Address</Label>
                 <Input
                   id="priEmail"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. john.smith@example.com"
+                  placeholder="e.g. john@example.com"
                 />
               </div>
 
               {/* Address */}
               <div>
-                <Label htmlFor="priAddr" required>
+                <Label htmlFor="priAddress" required>
                   Residential Address
                 </Label>
                 <Input
-                  id="priAddr"
+                  id="priAddress"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="e.g. 42 Parkside Boulevard, Apt 4B"
-                  hasError={Boolean(errors.address)}
+                  placeholder="e.g. Flat 302, Green Valley Apartments"
+                  hasError={Boolean(errors.priAddress)}
                 />
-                {errors.address && (
-                  <p className="text-xs text-red-600">{errors.address}</p>
+                {errors.priAddress && (
+                  <p className="text-xs text-red-600 mt-1">{errors.priAddress}</p>
                 )}
               </div>
 
               {/* Plan */}
-              <div className="sm:col-span-2">
+              <div>
                 <Label htmlFor="priPlan" required>
                   Membership Plan
                 </Label>
@@ -293,17 +342,17 @@ export function MembershipFormModal({
                   id="priPlan"
                   value={membershipPlan}
                   onChange={(e) => setMembershipPlan(e.target.value)}
-                  className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600"
+                  className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-800"
                 >
-                  {MEMBERSHIP_PLANS.map((plan) => (
-                    <option key={plan} value={plan}>
-                      {plan}
+                  {MEMBERSHIP_PLANS.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Joining & Expiry Dates */}
+              {/* Joining Date */}
               <div>
                 <Label htmlFor="priJoin" required>
                   Joining Date
@@ -316,6 +365,7 @@ export function MembershipFormModal({
                 />
               </div>
 
+              {/* Expiry Date */}
               <div>
                 <Label htmlFor="priExpiry" required>
                   Expiry Date
@@ -336,13 +386,16 @@ export function MembershipFormModal({
                 <Input
                   id="priFee"
                   type="number"
-                  min={0}
                   value={monthlyFee}
-                  onChange={(e) => setMonthlyFee(Number(e.target.value))}
-                  hasError={Boolean(errors.monthlyFee)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setMonthlyFee(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                  }}
+                  placeholder="e.g. 12000"
+                  hasError={Boolean(errors.priFee)}
                 />
-                {errors.monthlyFee && (
-                  <p className="text-xs text-red-600">{errors.monthlyFee}</p>
+                {errors.priFee && (
+                  <p className="text-xs text-red-600 mt-1">{errors.priFee}</p>
                 )}
               </div>
 
@@ -353,14 +406,17 @@ export function MembershipFormModal({
                 <Input
                   id="priPaid"
                   type="number"
-                  min={0}
                   value={amountPaid}
-                  onChange={(e) => setAmountPaid(Number(e.target.value))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAmountPaid(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                  }}
+                  placeholder="e.g. 12000"
                 />
               </div>
 
               <div>
-                <Label htmlFor="priMethod" required={amountPaid > 0}>
+                <Label htmlFor="priMethod" required={Number(amountPaid) > 0}>
                   Payment Method
                 </Label>
                 <select
@@ -441,7 +497,7 @@ export function MembershipFormModal({
                 variant="outline"
                 size="sm"
                 onClick={handleAddAdditionalMember}
-                className="gap-1.5 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50"
+                className="gap-1.5 text-xs font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Member</span>
@@ -457,17 +513,32 @@ export function MembershipFormModal({
             ) : (
               <div className="space-y-3">
                 {additionalMembers.map((member, idx) => (
-                  <AdditionalMemberCard
-                    key={member.id}
-                    index={idx}
-                    member={member}
-                    onChange={handleUpdateAdditionalMember}
-                    onRemove={() => handleRemoveAdditionalMember(member.id)}
-                  />
+                  <div key={member.id} className="space-y-1">
+                    <AdditionalMemberCard
+                      index={idx}
+                      member={member}
+                      onChange={handleUpdateAdditionalMember}
+                      onRemove={() => handleRemoveAdditionalMember(member.id)}
+                    />
+                    {errors[`mem-name-${member.id}`] && (
+                      <p className="text-xs text-red-600 pl-2">{errors[`mem-name-${member.id}`]}</p>
+                    )}
+                    {errors[`mem-phone-${member.id}`] && (
+                      <p className="text-xs text-red-600 pl-2">{errors[`mem-phone-${member.id}`]}</p>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Error Banner */}
+          {formError && (
+            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+              <div className="flex-1 font-medium">{formError}</div>
+            </div>
+          )}
 
           {/* Form Actions */}
           <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
@@ -476,14 +547,20 @@ export function MembershipFormModal({
               variant="outline"
               onClick={onClose}
               className="h-11 px-6"
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              disabled={isSubmitting}
+              className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer"
             >
-              {isEditMode ? "Update Membership" : "Save Membership"}
+              {isSubmitting
+                ? "Saving..."
+                : isEditMode
+                ? "Update Membership"
+                : "Save Membership"}
             </Button>
           </div>
         </form>

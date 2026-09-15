@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   Plus,
   Users,
@@ -13,6 +13,7 @@ import {
   Clock,
   CheckCircle2,
   Phone,
+  AlertCircle,
 } from "lucide-react";
 import {
   Kids1on1Student,
@@ -47,24 +48,27 @@ export function KidsCoaching1on1Module() {
   const [viewingStudent, setViewingStudent] = useState<Kids1on1Student | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [studentToEdit, setStudentToEdit] = useState<Kids1on1Student | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Form Fields
   const [studentName, setStudentName] = useState("");
   const [parentName, setParentName] = useState("");
   const [parentMobile, setParentMobile] = useState("");
-  const [age, setAge] = useState<number>(10);
+  const [age, setAge] = useState<number | "">("");
   const [gender, setGender] = useState<Gender>("Male");
   const [coach, setCoach] = useState<string>(COACHES[0]);
   const [preferredTiming, setPreferredTiming] = useState<string>(TIMING_SLOTS_1ON1[0]);
   const [sessionPackage, setSessionPackage] = useState<string>(SESSION_PACKAGES[0]);
-  const [totalSessions, setTotalSessions] = useState<number>(8);
-  const [sessionsCompleted, setSessionsCompleted] = useState<number>(0);
-  const [feeAmount, setFeeAmount] = useState<number>(250);
-  const [amountPaid, setAmountPaid] = useState<number>(250);
+  const [totalSessions, setTotalSessions] = useState<number | "">("");
+  const [sessionsCompleted, setSessionsCompleted] = useState<number | "">("");
+  const [feeAmount, setFeeAmount] = useState<number | "">("");
+  const [amountPaid, setAmountPaid] = useState<number | "">("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
   const [status, setStatus] = useState<StudentStatus>("Active");
   const [remarks, setRemarks] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Reset or Populate Form
@@ -73,15 +77,15 @@ export function KidsCoaching1on1Module() {
       setStudentName(studentToEdit.studentName);
       setParentName(studentToEdit.parentName);
       setParentMobile(studentToEdit.parentMobile);
-      setAge(studentToEdit.age);
+      setAge(studentToEdit.age ?? "");
       setGender(studentToEdit.gender);
       setCoach(studentToEdit.coach);
       setPreferredTiming(studentToEdit.preferredTiming);
       setSessionPackage(studentToEdit.sessionPackage);
-      setTotalSessions(studentToEdit.totalSessions);
-      setSessionsCompleted(studentToEdit.sessionsCompleted);
-      setFeeAmount(studentToEdit.feeAmount);
-      setAmountPaid(studentToEdit.amountPaid);
+      setTotalSessions(studentToEdit.totalSessions ?? "");
+      setSessionsCompleted(studentToEdit.sessionsCompleted ?? "");
+      setFeeAmount(studentToEdit.feeAmount ?? "");
+      setAmountPaid(studentToEdit.amountPaid ?? "");
       setPaymentMethod(studentToEdit.paymentMethod || "UPI");
       setStatus(studentToEdit.status);
       setRemarks(studentToEdit.remarks || "");
@@ -89,20 +93,22 @@ export function KidsCoaching1on1Module() {
       setStudentName("");
       setParentName("");
       setParentMobile("");
-      setAge(10);
+      setAge("");
       setGender("Male");
       setCoach(COACHES[0]);
       setPreferredTiming(TIMING_SLOTS_1ON1[0]);
       setSessionPackage(SESSION_PACKAGES[0]);
       setTotalSessions(8);
       setSessionsCompleted(0);
-      setFeeAmount(250);
-      setAmountPaid(250);
+      setFeeAmount("");
+      setAmountPaid("");
       setPaymentMethod("UPI");
       setStatus("Active");
       setRemarks("");
     }
     setErrors({});
+    setFormError("");
+    setIsSubmitting(false);
   }, [studentToEdit, isFormOpen]);
 
   // Filter logic: branch isolation + search by Parent Mobile Number + Month/Year
@@ -124,6 +130,7 @@ export function KidsCoaching1on1Module() {
   // Save / Update Handler
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
 
     const newErrors: Record<string, string> = {};
     if (!studentName.trim()) newErrors.studentName = "Student name is required.";
@@ -131,96 +138,120 @@ export function KidsCoaching1on1Module() {
     if (!parentMobile.trim() || !/^\d{10}$/.test(parentMobile.replace(/\D/g, ""))) {
       newErrors.parentMobile = "Enter a valid 10-digit parent phone.";
     }
-    if (age <= 0) newErrors.age = "Valid age is required.";
-    if (feeAmount < 0) newErrors.feeAmount = "Fee cannot be negative.";
-    if (amountPaid > 0 && !paymentMethod) {
+    if (age === "" || Number(age) <= 0) newErrors.age = "Valid age is required.";
+    if (feeAmount === "" || Number(feeAmount) < 0) newErrors.feeAmount = "Fee amount is required.";
+    if (amountPaid !== "" && Number(amountPaid) > 0 && !paymentMethod) {
       newErrors.paymentMethod = "Payment method is required when amount paid > 0.";
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setFormError("Please fill in all required fields highlighted in red.");
+      const firstId = Object.keys(newErrors)[0];
+      const el = document.getElementById(firstId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus();
+      } else if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
       return;
     }
 
-    const dueAmount = Math.max(0, feeAmount - amountPaid);
+    const numFee = feeAmount === "" ? 0 : Number(feeAmount);
+    const numPaid = amountPaid === "" ? 0 : Number(amountPaid);
+    const dueAmount = Math.max(0, numFee - numPaid);
     const paymentStatus =
-      dueAmount === 0 && amountPaid > 0
+      dueAmount === 0 && numPaid > 0
         ? "Paid"
-        : amountPaid > 0 && dueAmount > 0
+        : numPaid > 0 && dueAmount > 0
         ? "Partial"
         : "Pending";
-    const remainingSessions = Math.max(0, totalSessions - sessionsCompleted);
+    const numTotalSessions = Number(totalSessions) || 8;
+    const numSessionsCompleted = Number(sessionsCompleted) || 0;
+    const remainingSessions = Math.max(0, numTotalSessions - numSessionsCompleted);
     const now = new Date().toISOString();
 
-    if (studentToEdit) {
-      const updated = await kidsService.update1on1(
-        studentToEdit.id,
-        {
-          studentName: studentName.trim(),
-          parentName: parentName.trim(),
-          parentMobile: parentMobile.trim(),
-          age: Number(age),
-          gender,
-          coach,
-          preferredTiming,
-          sessionPackage,
-          totalSessions: Number(totalSessions),
-          sessionsCompleted: Number(sessionsCompleted),
-          sessionsRemaining: remainingSessions,
-          feeAmount: Number(feeAmount),
-          amountPaid: Number(amountPaid),
-          dueAmount,
-          paymentStatus,
-          paymentMethod,
-          status,
-          remarks: remarks.trim(),
-        },
-        employeeId
-      );
+    try {
+      setIsSubmitting(true);
+      if (studentToEdit) {
+        const updated = await kidsService.update1on1(
+          studentToEdit.id,
+          {
+            studentName: studentName.trim(),
+            parentName: parentName.trim(),
+            parentMobile: parentMobile.trim(),
+            age: Number(age),
+            gender,
+            coach,
+            preferredTiming,
+            sessionPackage,
+            totalSessions: numTotalSessions,
+            sessionsCompleted: numSessionsCompleted,
+            sessionsRemaining: remainingSessions,
+            feeAmount: numFee,
+            amountPaid: numPaid,
+            dueAmount,
+            paymentStatus,
+            paymentMethod,
+            status,
+            remarks: remarks.trim(),
+          },
+          employeeId
+        );
 
-      setStudents((prev) =>
-        prev.map((item) => (item.id === studentToEdit.id ? updated : item))
-      );
-      if (viewingStudent?.id === studentToEdit.id) {
-        setViewingStudent(updated);
-      }
-    } else {
-      const created = await kidsService.create1on1(
-        {
-          studentName: studentName.trim(),
-          parentName: parentName.trim(),
-          parentMobile: parentMobile.trim(),
-          age: Number(age),
-          gender,
-          coach,
-          preferredTiming,
-          sessionPackage,
-          totalSessions: Number(totalSessions),
-          sessionsCompleted: Number(sessionsCompleted),
-          sessionsRemaining: remainingSessions,
-          feeAmount: Number(feeAmount),
-          amountPaid: Number(amountPaid),
-          dueAmount,
-          paymentStatus,
-          paymentMethod,
-          joiningDate: new Date().toISOString().split("T")[0],
-          month: "March",
-          year: 2026,
-          status,
-          remarks: remarks.trim(),
-        },
-        {
-          branchId: currentBranch.id,
-          branchName: currentBranch.name,
-          employeeId,
-          employeeName,
+        setStudents((prev) =>
+          prev.map((item) => (item.id === studentToEdit.id ? updated : item))
+        );
+        if (viewingStudent?.id === studentToEdit.id) {
+          setViewingStudent(updated);
         }
-      );
-      setStudents((prev) => [created, ...prev]);
-    }
+      } else {
+        const created = await kidsService.create1on1(
+          {
+            studentName: studentName.trim(),
+            parentName: parentName.trim(),
+            parentMobile: parentMobile.trim(),
+            age: Number(age),
+            gender,
+            coach,
+            preferredTiming,
+            sessionPackage,
+            totalSessions: numTotalSessions,
+            sessionsCompleted: numSessionsCompleted,
+            sessionsRemaining: remainingSessions,
+            feeAmount: numFee,
+            amountPaid: numPaid,
+            dueAmount,
+            paymentStatus,
+            paymentMethod,
+            joiningDate: new Date().toISOString().split("T")[0],
+            month: "March",
+            year: 2026,
+            status,
+            remarks: remarks.trim(),
+          },
+          {
+            branchId: currentBranch.id,
+            branchName: currentBranch.name,
+            employeeId,
+            employeeName,
+          }
+        );
+        setStudents((prev) => [created, ...prev]);
+      }
 
-    setIsFormOpen(false);
-    setStudentToEdit(null);
+      setIsFormOpen(false);
+      setStudentToEdit(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save student. Please try again.";
+      setFormError(msg);
+      if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -641,7 +672,7 @@ export function KidsCoaching1on1Module() {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-4">
+            <form ref={formRef} noValidate onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="sName" required>Student Name</Label>
@@ -649,9 +680,10 @@ export function KidsCoaching1on1Module() {
                     id="sName"
                     value={studentName}
                     onChange={(e) => setStudentName(e.target.value)}
+                    placeholder="e.g. Aarav Patel"
                     hasError={Boolean(errors.studentName)}
                   />
-                  {errors.studentName && <p className="text-xs text-red-600">{errors.studentName}</p>}
+                  {errors.studentName && <p className="text-xs text-red-600 mt-1">{errors.studentName}</p>}
                 </div>
                 <div>
                   <Label htmlFor="pName" required>Parent Name</Label>
@@ -659,9 +691,10 @@ export function KidsCoaching1on1Module() {
                     id="pName"
                     value={parentName}
                     onChange={(e) => setParentName(e.target.value)}
+                    placeholder="e.g. Vikram Patel"
                     hasError={Boolean(errors.parentName)}
                   />
-                  {errors.parentName && <p className="text-xs text-red-600">{errors.parentName}</p>}
+                  {errors.parentName && <p className="text-xs text-red-600 mt-1">{errors.parentName}</p>}
                 </div>
                 <div>
                   <Label htmlFor="pMobile" required>Parent Mobile</Label>
@@ -669,10 +702,11 @@ export function KidsCoaching1on1Module() {
                     id="pMobile"
                     value={parentMobile}
                     onChange={(e) => setParentMobile(e.target.value)}
+                    placeholder="e.g. 9876543210"
                     maxLength={10}
                     hasError={Boolean(errors.parentMobile)}
                   />
-                  {errors.parentMobile && <p className="text-xs text-red-600">{errors.parentMobile}</p>}
+                  {errors.parentMobile && <p className="text-xs text-red-600 mt-1">{errors.parentMobile}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -681,8 +715,14 @@ export function KidsCoaching1on1Module() {
                       id="age"
                       type="number"
                       value={age}
-                      onChange={(e) => setAge(Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAge(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                      }}
+                      placeholder="e.g. 10"
+                      hasError={Boolean(errors.age)}
                     />
+                    {errors.age && <p className="text-xs text-red-600 mt-1">{errors.age}</p>}
                   </div>
                   <div>
                     <Label htmlFor="gender" required>Gender</Label>
@@ -742,7 +782,11 @@ export function KidsCoaching1on1Module() {
                       id="tot"
                       type="number"
                       value={totalSessions}
-                      onChange={(e) => setTotalSessions(Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTotalSessions(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                      }}
+                      placeholder="e.g. 8"
                     />
                   </div>
                   <div>
@@ -751,7 +795,11 @@ export function KidsCoaching1on1Module() {
                       id="comp"
                       type="number"
                       value={sessionsCompleted}
-                      onChange={(e) => setSessionsCompleted(Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSessionsCompleted(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                      }}
+                      placeholder="e.g. 0"
                     />
                   </div>
                 </div>
@@ -761,20 +809,30 @@ export function KidsCoaching1on1Module() {
                     id="fee"
                     type="number"
                     value={feeAmount}
-                    onChange={(e) => setFeeAmount(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFeeAmount(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                    }}
+                    placeholder="e.g. 2500"
+                    hasError={Boolean(errors.feeAmount)}
                   />
+                  {errors.feeAmount && <p className="text-xs text-red-600 mt-1">{errors.feeAmount}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="paid" required>Amount Paid (₹)</Label>
+                  <Label htmlFor="paid">Amount Paid (₹)</Label>
                   <Input
                     id="paid"
                     type="number"
                     value={amountPaid}
-                    onChange={(e) => setAmountPaid(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAmountPaid(val === "" ? "" : Math.max(0, parseInt(val, 10) || 0));
+                    }}
+                    placeholder="e.g. 2500"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="paymentMethod" required={amountPaid > 0}>Payment Method</Label>
+                  <Label htmlFor="paymentMethod" required={Number(amountPaid) > 0}>Payment Method</Label>
                   <select
                     id="paymentMethod"
                     value={paymentMethod}
@@ -809,10 +867,33 @@ export function KidsCoaching1on1Module() {
                 </div>
               </div>
 
+              {/* Error Banner */}
+              {formError && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+                  <div className="flex-1 font-medium">{formError}</div>
+                </div>
+              )}
+
               <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
-                  {studentToEdit ? "Update Student" : "Save Student"}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsFormOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer font-semibold"
+                >
+                  {isSubmitting
+                    ? "Saving..."
+                    : studentToEdit
+                    ? "Update Student"
+                    : "Save Student"}
                 </Button>
               </div>
             </form>

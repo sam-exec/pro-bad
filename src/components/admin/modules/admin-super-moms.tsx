@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Plus, Users, Heart, DollarSign, Eye, Edit2, X } from "lucide-react";
+import React, { useState, useMemo, useRef } from "react";
+import { Plus, Users, Heart, DollarSign, Eye, Edit2, X, AlertCircle } from "lucide-react";
 import { SuperMomsRecord } from "@/types/branch";
 import { PaymentMethod, PaymentStatus } from "@/types/payment";
 import { superMomsService } from "@/services/excel";
@@ -55,17 +55,30 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
   const [viewingRecord, setViewingRecord] = useState<SuperMomsRecord | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [recordToEdit, setRecordToEdit] = useState<SuperMomsRecord | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    memberName: string;
+    mobileNumber: string;
+    batch: string;
+    coach: string;
+    monthlyFee: number | "";
+    amountPaid: number | "";
+    paymentMethod: PaymentMethod;
+    joiningDate: string;
+    status: "Active" | "Inactive";
+  }>({
     memberName: "",
     mobileNumber: "",
     batch: SUPER_MOMS_BATCHES[0],
     coach: "Coach Sunita Rao",
-    monthlyFee: 140,
-    amountPaid: 140,
-    paymentMethod: "Cash" as PaymentMethod,
+    monthlyFee: "",
+    amountPaid: "",
+    paymentMethod: "Cash",
     joiningDate: "2026-03-01",
-    status: "Active" as const,
+    status: "Active",
   });
 
   const filteredRecords = useMemo(() => {
@@ -122,13 +135,14 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
 
   const handleOpenAdd = () => {
     setRecordToEdit(null);
+    setFormError(null);
     setFormData({
       memberName: "",
       mobileNumber: "",
       batch: SUPER_MOMS_BATCHES[0],
       coach: "Coach Sunita Rao",
-      monthlyFee: 140,
-      amountPaid: 140,
+      monthlyFee: "",
+      amountPaid: "",
       paymentMethod: "Cash",
       joiningDate: new Date().toISOString().split("T")[0],
       status: "Active",
@@ -138,6 +152,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
 
   const handleOpenEdit = (r: SuperMomsRecord) => {
     setRecordToEdit(r);
+    setFormError(null);
     setFormData({
       memberName: r.memberName,
       mobileNumber: r.mobileNumber,
@@ -147,42 +162,73 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
       amountPaid: r.amountPaid,
       paymentMethod: r.paymentMethod || "Cash",
       joiningDate: r.joiningDate,
-      status: r.status as any,
+      status: r.status as "Active" | "Inactive",
     });
     setIsFormOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
+    if (!formData.memberName.trim()) {
+      setFormError("Mother's name is required.");
+      return;
+    }
+    const cleanPhone = formData.mobileNumber.replace(/\D/g, "");
+    if (!formData.mobileNumber.trim() || cleanPhone.length !== 10) {
+      setFormError("A valid 10-digit mobile number is required.");
+      return;
+    }
+
     const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
     const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
 
-    const dueAmount = Math.max(0, formData.monthlyFee - formData.amountPaid);
+    const fee = Number(formData.monthlyFee) || 0;
+    const paid = Number(formData.amountPaid) || 0;
+    const dueAmount = Math.max(0, fee - paid);
     const paymentStatus: PaymentStatus =
-      formData.amountPaid >= formData.monthlyFee ? "Paid" : formData.amountPaid > 0 ? "Partial" : "Pending";
+      paid >= fee && fee > 0 ? "Paid" : paid > 0 ? "Partial" : "Pending";
     const payload = {
       ...formData,
+      monthlyFee: fee,
+      amountPaid: paid,
       dueAmount,
       paymentStatus,
       paymentMethod: formData.paymentMethod || "Cash",
     };
 
-    if (recordToEdit) {
-      superMomsService.update(recordToEdit.id, payload, "ADM001");
-    } else {
-      superMomsService.create(
-        payload,
-        {
-          branchId: targetBranchId,
-          branchName: targetBranchName,
-          employeeId: "ADM001",
-          employeeName: "Super Admin",
-        }
-      );
+    try {
+      setIsSubmitting(true);
+      if (recordToEdit) {
+        await superMomsService.update(
+          recordToEdit.id,
+          payload,
+          "ADM001"
+        );
+      } else {
+        await superMomsService.create(
+          payload,
+          {
+            branchId: targetBranchId,
+            branchName: targetBranchName,
+            employeeId: "ADM001",
+            employeeName: "Super Admin",
+          }
+        );
+      }
+      setRecords(superMomsService.getSnapshot());
+      setIsFormOpen(false);
+      setRecordToEdit(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save Super Mom. Please try again.";
+      setFormError(msg);
+      if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-    setRecords(superMomsService.getSnapshot());
-    setIsFormOpen(false);
-    setRecordToEdit(null);
   };
 
   return (
@@ -493,7 +539,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                 </button>
               </div>
 
-              <form onSubmit={handleSave} className="space-y-3.5 text-xs">
+              <form ref={formRef} noValidate onSubmit={handleSave} className="space-y-3.5 text-xs">
                 <div>
                   <Label className="text-xs">Mother's Name</Label>
                   <Input
@@ -543,7 +589,15 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                     <Input
                       type="number"
                       value={formData.monthlyFee}
-                      onChange={(e) => setFormData({ ...formData, monthlyFee: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          monthlyFee:
+                            e.target.value === ""
+                              ? ""
+                              : Math.max(0, parseInt(e.target.value, 10) || 0),
+                        })
+                      }
                       className="h-9 mt-1 text-xs"
                     />
                   </div>
@@ -552,25 +606,40 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                     <Input
                       type="number"
                       value={formData.amountPaid}
-                      onChange={(e) => setFormData({ ...formData, amountPaid: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          amountPaid:
+                            e.target.value === ""
+                              ? ""
+                              : Math.max(0, parseInt(e.target.value, 10) || 0),
+                        })
+                      }
                       className="h-9 mt-1 text-xs"
                     />
                   </div>
                   <div>
                     <Label className="text-xs">
-                      Payment Method {formData.amountPaid > 0 && <span className="text-red-500">*</span>}
+                      Payment Method {Number(formData.amountPaid) > 0 && <span className="text-red-500">*</span>}
                     </Label>
                     <select
                       value={formData.paymentMethod}
                       onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value as PaymentMethod })}
                       className="w-full h-9 mt-1 rounded-lg border border-slate-200 px-2.5 text-xs bg-white"
-                      required={formData.amountPaid > 0}
+                      required={Number(formData.amountPaid) > 0}
                     >
                       <option value="Cash">Cash</option>
                       <option value="UPI">UPI</option>
                     </select>
                   </div>
                 </div>
+
+                {formError && (
+                  <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    <span>{formError}</span>
+                  </div>
+                )}
 
                 <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200">
                   <Button
@@ -581,8 +650,12 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" className="h-9 text-xs bg-rose-600 hover:bg-rose-700 text-white">
-                    {recordToEdit ? "Update Super Mom" : "Save Super Mom"}
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="h-9 text-xs bg-rose-600 hover:bg-rose-700 text-white"
+                  >
+                    {isSubmitting ? "Saving..." : recordToEdit ? "Update Super Mom" : "Save Super Mom"}
                   </Button>
                 </div>
               </form>

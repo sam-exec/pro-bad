@@ -1,7 +1,7 @@
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata = {
-  title: "Admin Login | Employee Management System",
+  title: "Admin Login | Academy Management Portal",
   description: "Secure access for administrators and owners.",
 };
 

@@ -21,7 +21,7 @@ export default function Home() {
             <Logo size="lg" showText={false} />
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900">
-            Employee Management System
+            Academy Management Portal
           </h1>
           <p className="mt-3 text-base sm:text-lg text-slate-500 max-w-md">
             Secure portal for employees and administrators.

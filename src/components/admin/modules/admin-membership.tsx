@@ -117,14 +117,14 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
     return { total, active, totalDue, familyMembers };
   }, [filteredRecords]);
 
-  const handleSave = (recordData: Partial<MembershipRecord>, idToEdit?: string) => {
+  const handleSave = async (recordData: Partial<MembershipRecord>, idToEdit?: string) => {
     const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
     const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
 
     if (idToEdit) {
-      membershipService.update(idToEdit, recordData, "ADM001");
+      await membershipService.update(idToEdit, recordData, "ADM001");
     } else {
-      membershipService.create(recordData as any, {
+      await membershipService.create(recordData as any, {
         branchId: targetBranchId,
         branchName: targetBranchName,
         employeeId: "ADM001",

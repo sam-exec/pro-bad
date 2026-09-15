@@ -57,10 +57,10 @@ export function Logo({
               textSizes[size]
             )}
           >
-            Work<span className="text-blue-600">Pulse</span>
+            Pro-<span className="text-blue-600">Badminton</span>
           </span>
           <span className="text-[10px] tracking-widest text-slate-400 font-medium uppercase mt-0.5">
-            EMS Portal
+            Academy
           </span>
         </div>
       )}

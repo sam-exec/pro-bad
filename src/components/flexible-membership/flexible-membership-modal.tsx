@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X, Plus, Clock, UserCheck, ShieldCheck } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { X, Plus, Clock, UserCheck, ShieldCheck, AlertCircle } from "lucide-react";
 import {
   FlexibleMembershipRecord,
   calculateExpiryDate,
@@ -22,7 +22,7 @@ interface FlexibleMembershipModalProps {
   onSave: (
     data: Partial<FlexibleMembershipRecord>,
     idToEdit?: string
-  ) => void;
+  ) => void | Promise<void>;
 }
 
 export function FlexibleMembershipModal({
@@ -32,6 +32,7 @@ export function FlexibleMembershipModal({
   onSave,
 }: FlexibleMembershipModalProps) {
   const isEditMode = Boolean(membershipToEdit);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Section 1: Primary Member Fields
   const [primaryMemberName, setPrimaryMemberName] = useState("");
@@ -40,9 +41,9 @@ export function FlexibleMembershipModal({
   const [address, setAddress] = useState("");
   const [joiningDate, setJoiningDate] = useState("2026-03-01");
   const [expiryDate, setExpiryDate] = useState(calculateExpiryDate("2026-03-01"));
-  const [totalHours, setTotalHours] = useState<number>(30);
-  const [hoursUsed, setHoursUsed] = useState<number>(0);
-  const [amountPaid, setAmountPaid] = useState<number>(450);
+  const [totalHours, setTotalHours] = useState<number | "">(30);
+  const [hoursUsed, setHoursUsed] = useState<number | "">(0);
+  const [amountPaid, setAmountPaid] = useState<number | "">("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
   const [status, setStatus] = useState<FlexibleStatus>("Active");
   const [remarks, setRemarks] = useState("");
@@ -51,6 +52,8 @@ export function FlexibleMembershipModal({
   const [additionalMembers, setAdditionalMembers] = useState<LinkedMember[]>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Recalculate expiry when joiningDate changes
   const handleJoiningDateChange = (newDate: string) => {
@@ -67,9 +70,9 @@ export function FlexibleMembershipModal({
       setAddress(membershipToEdit.address);
       setJoiningDate(membershipToEdit.joiningDate);
       setExpiryDate(membershipToEdit.expiryDate);
-      setTotalHours(membershipToEdit.totalHours || 30);
-      setHoursUsed(membershipToEdit.hoursUsed || 0);
-      setAmountPaid(membershipToEdit.amountPaid || 450);
+      setTotalHours(membershipToEdit.totalHours ?? 30);
+      setHoursUsed(membershipToEdit.hoursUsed ?? 0);
+      setAmountPaid(membershipToEdit.amountPaid ?? 0);
       setPaymentMethod(membershipToEdit.paymentMethod || "Cash");
       setStatus(membershipToEdit.status);
       setRemarks(membershipToEdit.remarks || "");
@@ -84,13 +87,14 @@ export function FlexibleMembershipModal({
       setExpiryDate(calculateExpiryDate(today, 45));
       setTotalHours(30);
       setHoursUsed(0);
-      setAmountPaid(450);
+      setAmountPaid("");
       setPaymentMethod("Cash");
       setStatus("Active");
       setRemarks("");
       setAdditionalMembers([]);
     }
     setErrors({});
+    setFormError(null);
   }, [membershipToEdit, isOpen]);
 
   if (!isOpen) return null;
@@ -103,7 +107,7 @@ export function FlexibleMembershipModal({
       memberId: `FLX-M-${String(newIdx).padStart(3, "0")}`,
       name: "",
       mobileNumber: "",
-      individualContribution: 0,
+      individualContribution: "",
     };
     setAdditionalMembers((prev) => [...prev, newMember]);
   };
@@ -118,8 +122,9 @@ export function FlexibleMembershipModal({
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
 
     const newErrors: Record<string, string> = {};
     if (!primaryMemberName.trim()) {
@@ -134,22 +139,48 @@ export function FlexibleMembershipModal({
     if (!address.trim()) {
       newErrors.address = "Address is required.";
     }
-    if (hoursUsed < 0 || hoursUsed > totalHours) {
-      newErrors.hoursUsed = `Hours used must be between 0 and ${totalHours}.`;
+    const numTotalHours = Number(totalHours) || 30;
+    const numHoursUsed = Number(hoursUsed) || 0;
+    if (numHoursUsed < 0 || numHoursUsed > numTotalHours) {
+      newErrors.hoursUsed = `Hours used must be between 0 and ${numTotalHours}.`;
     }
-    if (amountPaid > 0 && !paymentMethod) {
+
+    for (let i = 0; i < additionalMembers.length; i++) {
+      const m = additionalMembers[i];
+      if (!m.name.trim()) {
+        newErrors[`member_${i}_name`] = `Additional member #${i + 1} name is required.`;
+      }
+      if (m.mobileNumber && m.mobileNumber.replace(/\D/g, "").length !== 10) {
+        newErrors[`member_${i}_mobile`] = `Additional member #${i + 1} mobile number must be 10 digits.`;
+      }
+    }
+    if (Number(amountPaid) > 0 && !paymentMethod) {
       newErrors.paymentMethod = "Payment method is required when payment amount > 0.";
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setFormError(Object.values(newErrors)[0]);
+
+      const fieldMap: Record<string, string> = {
+        primaryMemberName: "flxPriName",
+        primaryMobileNumber: "flxPriMobile",
+        address: "flxAddr",
+        hoursUsed: "flxUsed",
+        amountPaid: "flxPaid",
+      };
+      const firstKey = Object.keys(newErrors)[0];
+      const targetId = fieldMap[firstKey];
+      if (targetId) {
+        document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
 
-    const computedRemaining = Math.max(0, totalHours - hoursUsed);
+    const computedRemaining = Math.max(0, numTotalHours - numHoursUsed);
     const computedStatus = determineFlexibleStatus(
-      totalHours,
-      hoursUsed,
+      numTotalHours,
+      numHoursUsed,
       expiryDate
     );
 
@@ -165,8 +196,8 @@ export function FlexibleMembershipModal({
       address: address.trim(),
       joiningDate,
       expiryDate,
-      totalHours,
-      hoursUsed,
+      totalHours: numTotalHours,
+      hoursUsed: numHoursUsed,
       hoursRemaining: computedRemaining,
       planFee: feeNum,
       amountPaid: paidNum,
@@ -178,11 +209,22 @@ export function FlexibleMembershipModal({
       additionalMembers,
     };
 
-    onSave(payload, membershipToEdit?.id);
-    onClose();
+    try {
+      setIsSubmitting(true);
+      await onSave(payload, membershipToEdit?.id);
+      onClose();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save flexible membership.";
+      setFormError(msg);
+      if (formRef.current) {
+        formRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const hoursRemaining = Math.max(0, totalHours - hoursUsed);
+  const hoursRemaining = Math.max(0, (Number(totalHours) || 30) - (Number(hoursUsed) || 0));
 
   return (
     <>
@@ -218,7 +260,7 @@ export function FlexibleMembershipModal({
         </div>
 
         {/* Scrollable Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-8">
+        <form ref={formRef} noValidate onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-8">
           {/* SECTION 1: Primary Member */}
           <div className="space-y-4">
             <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
@@ -345,9 +387,15 @@ export function FlexibleMembershipModal({
                   id="flxUsed"
                   type="number"
                   min={0}
-                  max={totalHours}
+                  max={Number(totalHours) || 30}
                   value={hoursUsed}
-                  onChange={(e) => setHoursUsed(Number(e.target.value))}
+                  onChange={(e) =>
+                    setHoursUsed(
+                      e.target.value === ""
+                        ? ""
+                        : Math.max(0, parseInt(e.target.value, 10) || 0)
+                    )
+                  }
                   hasError={Boolean(errors.hoursUsed)}
                 />
                 <span className="text-[11px] text-slate-400 mt-0.5 block">
@@ -367,12 +415,18 @@ export function FlexibleMembershipModal({
                   type="number"
                   min={0}
                   value={amountPaid}
-                  onChange={(e) => setAmountPaid(Number(e.target.value))}
+                  onChange={(e) =>
+                    setAmountPaid(
+                      e.target.value === ""
+                        ? ""
+                        : Math.max(0, parseInt(e.target.value, 10) || 0)
+                    )
+                  }
                 />
               </div>
 
               <div>
-                <Label htmlFor="flxPaymentMethod" required={amountPaid > 0}>
+                <Label htmlFor="flxPaymentMethod" required={Number(amountPaid) > 0}>
                   Payment Method
                 </Label>
                 <select
@@ -466,6 +520,13 @@ export function FlexibleMembershipModal({
             )}
           </div>
 
+          {formError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
+
           {/* Form Actions */}
           <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
             <Button
@@ -478,9 +539,14 @@ export function FlexibleMembershipModal({
             </Button>
             <Button
               type="submit"
+              disabled={isSubmitting}
               className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
             >
-              {isEditMode ? "Update Flexible Membership" : "Save Flexible Membership"}
+              {isSubmitting
+                ? "Saving..."
+                : isEditMode
+                ? "Update Flexible Membership"
+                : "Save Flexible Membership"}
             </Button>
           </div>
         </form>
