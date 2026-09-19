@@ -11,7 +11,6 @@ import {
   Phone,
   Mail,
   Calendar,
-  Building2,
   Lock,
   Clock,
   CheckCircle2,
@@ -23,12 +22,12 @@ import {
   EmployeeStatus,
 } from "@/types/admin";
 import { INITIAL_ADMIN_EMPLOYEES } from "@/data/admin-mock";
-import { SearchBar } from "@/components/kids-coaching/search-bar";
+import { UniversalSearch } from "@/components/ui/universal-search";
+import { universalMatch } from "@/lib/search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { BRANCHES } from "@/config/branches";
 import { cn } from "@/lib/utils";
 
 const ROLES: EmployeeRole[] = [
@@ -40,16 +39,11 @@ const ROLES: EmployeeRole[] = [
   "Senior Coach",
 ];
 
-interface AdminEmployeesProps {
-  selectedBranch: string; // "all" | "branch-nlg" | "branch-mnk"
-}
-
-export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
+export function AdminEmployees() {
   const [employees, setEmployees] = useState<AdminEmployee[]>(
     INITIAL_ADMIN_EMPLOYEES
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [branchFilter, setBranchFilter] = useState<string>("All");
   const [roleFilter, setRoleFilter] = useState<string>("All");
 
   // Modal & Drawer State
@@ -67,7 +61,6 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
     name: "",
     phone: "",
     email: "",
-    branchId: "branch-nlg",
     role: "Desk Manager" as EmployeeRole,
     password: "",
     status: "Active" as EmployeeStatus,
@@ -79,45 +72,23 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
   // Filtered employees
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
-      // 1. Header Branch Selector constraint
-      if (selectedBranch !== "all" && emp.branchId !== selectedBranch) {
-        return false;
-      }
-
-      // 2. In-page Branch Filter
-      if (branchFilter !== "All" && emp.branchId !== branchFilter) {
-        return false;
-      }
-
-      // 3. Role Filter
+      // Role Filter
       if (roleFilter !== "All" && emp.role !== roleFilter) {
         return false;
       }
 
-      // 4. Search Filter
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchName = emp.name.toLowerCase().includes(q);
-        const matchId = emp.employeeId.toLowerCase().includes(q);
-        const matchPhone = emp.phone.includes(q.replace(/\D/g, ""));
-        const matchEmail = emp.email.toLowerCase().includes(q);
-        if (!matchName && !matchId && !matchPhone && !matchEmail) {
-          return false;
-        }
+      if (searchQuery.trim() && !universalMatch(emp, searchQuery)) {
+        return false;
       }
 
       return true;
     });
-  }, [employees, selectedBranch, branchFilter, roleFilter, searchQuery]);
+  }, [employees, roleFilter, searchQuery]);
 
   // Open Modal for Add
   const handleOpenAdd = () => {
-    const branchTarget =
-      selectedBranch === "branch-mnk" ? "branch-mnk" : "branch-nlg";
-    const prefix = branchTarget === "branch-mnk" ? "MNK" : "NLG";
-    const nextNum =
-      employees.filter((e) => e.branchId === branchTarget).length + 1;
-    const generatedId = `${prefix}${String(nextNum).padStart(3, "0")}`;
+    const nextNum = employees.length + 1;
+    const generatedId = `EMP${String(nextNum).padStart(3, "0")}`;
 
     setEmployeeToEdit(null);
     setFormData({
@@ -125,7 +96,6 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
       name: "",
       phone: "",
       email: "",
-      branchId: branchTarget,
       role: "Desk Manager",
       password: "••••••••",
       status: "Active",
@@ -144,7 +114,6 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
       name: emp.name,
       phone: emp.phone,
       email: emp.email,
-      branchId: emp.branchId,
       role: emp.role,
       password: "••••••••",
       status: emp.status,
@@ -176,7 +145,6 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
       return;
     }
 
-    const branchObj = BRANCHES.find((b) => b.id === formData.branchId) || BRANCHES[0];
     const timestamp = new Date().toISOString();
 
     if (employeeToEdit) {
@@ -187,7 +155,6 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
             const updated: AdminEmployee = {
               ...item,
               ...formData,
-              branchName: branchObj.name,
               updatedAt: timestamp,
             };
             return updated;
@@ -201,7 +168,6 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
             ? {
                 ...prev,
                 ...formData,
-                branchName: branchObj.name,
                 updatedAt: timestamp,
               }
             : null
@@ -210,13 +176,11 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
     } else {
       // Create new
       const newRecord: AdminEmployee = {
-        id: `emp-${Date.now()}`,
+        id: `emp-${crypto.randomUUID()}`,
         employeeId: formData.employeeId.trim().toUpperCase(),
         name: formData.name.trim(),
         phone: formData.phone.trim(),
         email: formData.email.trim(),
-        branchId: branchObj.id,
-        branchName: branchObj.name,
         role: formData.role,
         status: formData.status,
         joiningDate: formData.joiningDate,
@@ -247,7 +211,7 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Manage staff credentials, role assignments, and branch locations.
+            Manage staff credentials, role assignments, and system permissions.
           </p>
         </div>
 
@@ -262,30 +226,13 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
 
       {/* Filter Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
-        <SearchBar
+        <UniversalSearch
           value={searchQuery}
           onChange={setSearchQuery}
           placeholder="Search by name, ID, phone, or email..."
         />
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Branch Filter */}
-          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-            <span>Branch:</span>
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50/50 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 cursor-pointer"
-            >
-              <option value="All">All Branches</option>
-              {BRANCHES.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} ({b.code})
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Role Filter */}
           <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
             <span>Role:</span>
@@ -309,13 +256,12 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
               <tr>
                 <th className="py-3.5 px-4">Employee ID</th>
                 <th className="py-3.5 px-4">Name</th>
                 <th className="py-3.5 px-4">Phone</th>
                 <th className="py-3.5 px-4">Email</th>
-                <th className="py-3.5 px-4">Branch</th>
                 <th className="py-3.5 px-4">Role</th>
                 <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4">Joining Date</th>
@@ -326,7 +272,7 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
             <tbody className="divide-y divide-slate-100">
               {filteredEmployees.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
                     No employees matching the current filters.
                   </td>
                 </tr>
@@ -347,18 +293,6 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
                     </td>
                     <td className="py-3 px-4 text-xs text-slate-500 truncate max-w-[180px]">
                       {emp.email}
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span
-                        className={cn(
-                          "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border",
-                          emp.branchId === "branch-mnk"
-                            ? "bg-purple-50 text-purple-700 border-purple-200"
-                            : "bg-blue-50 text-blue-700 border-blue-200"
-                        )}
-                      >
-                        {emp.branchName}
-                      </span>
                     </td>
                     <td className="py-3 px-4 text-xs font-medium text-slate-700 whitespace-nowrap">
                       {emp.role}
@@ -427,7 +361,7 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
                   {employeeToEdit ? "Edit Employee Record" : "Add New Employee"}
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Assign branch location, contact info, and permission tier.
+                  Assign contact info, credentials, and permission tier.
                 </p>
               </div>
               <button
@@ -440,45 +374,23 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
             </div>
 
             <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="employeeId" required>
-                    Employee ID
-                  </Label>
-                  <Input
-                    id="employeeId"
-                    value={formData.employeeId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, employeeId: e.target.value })
-                    }
-                    placeholder="e.g. NLG005"
-                    className="font-mono uppercase h-10"
-                    hasError={Boolean(errors.employeeId)}
-                  />
-                  {errors.employeeId && (
-                    <p className="text-[11px] text-red-600">{errors.employeeId}</p>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="branch" required>
-                    Branch Assignment
-                  </Label>
-                  <select
-                    id="branch"
-                    value={formData.branchId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, branchId: e.target.value })
-                    }
-                    className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600"
-                  >
-                    {BRANCHES.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} ({b.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="space-y-1">
+                <Label htmlFor="employeeId" required>
+                  Employee ID
+                </Label>
+                <Input
+                  id="employeeId"
+                  value={formData.employeeId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, employeeId: e.target.value })
+                  }
+                  placeholder="e.g. EMP009"
+                  className="font-mono uppercase h-10"
+                  hasError={Boolean(errors.employeeId)}
+                />
+                {errors.employeeId && (
+                  <p className="text-[11px] text-red-600">{errors.employeeId}</p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -718,12 +630,6 @@ export function AdminEmployees({ selectedBranch }: AdminEmployeesProps) {
                   <div className="flex items-center gap-3 text-slate-700">
                     <Mail className="w-4 h-4 text-slate-400 shrink-0" />
                     <span className="text-xs">{viewingEmployee.email}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-700">
-                    <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span className="text-xs font-semibold">
-                      {viewingEmployee.branchName} Branch ({viewingEmployee.branchId})
-                    </span>
                   </div>
                 </div>
               </div>

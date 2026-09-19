@@ -102,7 +102,7 @@ export function MembershipFormModal({
   const handleAddAdditionalMember = () => {
     const newIdx = additionalMembers.length + 1;
     const newMember: LinkedMember = {
-      id: `lm-${Date.now()}-${newIdx}`,
+      id: `lm-${crypto.randomUUID()}`,
       memberId: `LM-${String(newIdx).padStart(3, "0")}`,
       name: "",
       mobileNumber: "",

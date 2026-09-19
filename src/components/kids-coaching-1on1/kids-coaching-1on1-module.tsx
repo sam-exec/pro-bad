@@ -14,6 +14,9 @@ import {
   CheckCircle2,
   Phone,
   AlertCircle,
+  GraduationCap,
+  Award,
+  DollarSign,
 } from "lucide-react";
 import {
   Kids1on1Student,
@@ -25,7 +28,8 @@ import { PaymentMethod } from "@/types/payment";
 import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { kidsService } from "@/services/excel";
-import { SearchBar } from "@/components/kids-coaching/search-bar";
+import { UniversalSearch } from "@/components/ui/universal-search";
+import { universalMatch } from "@/lib/search";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
 import { PaymentBadge } from "@/components/kids-coaching/payment-badge";
@@ -33,13 +37,42 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { useBranch } from "@/context/branch-context";
+import { useAuth } from "@/context/auth-context";
+import { ExportDropdown } from "@/components/admin/common/export-dropdown";
+import { ExportColumn } from "@/utils/export-engine";
+
+const EXPORT_COLUMNS: ExportColumn<Kids1on1Student>[] = [
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
+  { header: "Student Name", key: "studentName" },
+  { header: "Parent Name", key: "parentName" },
+  { header: "Mobile", key: "parentMobile" },
+  { header: "Age", key: "age" },
+  { header: "Gender", key: "gender" },
+  { header: "Coach", key: "coach" },
+  { header: "Timing", key: "preferredTiming" },
+  { header: "Package", key: "sessionPackage" },
+  { header: "Completed Sessions", key: "sessionsCompleted" },
+  { header: "Remaining Sessions", key: "sessionsRemaining" },
+  { header: "Total Fee", key: "feeAmount", formatter: (r) => `₹${r.feeAmount}` },
+  { header: "Paid Amount", key: "amountPaid", formatter: (r) => `₹${r.amountPaid}` },
+  { header: "Due Amount", key: "dueAmount", formatter: (r) => `₹${r.dueAmount}` },
+  { header: "Payment Method", key: "paymentMethod" },
+  { header: "Payment Status", key: "paymentStatus" },
+  { header: "Status", key: "status" },
+  { header: "Joining Date", key: "joiningDate" },
+];
 
 export function KidsCoaching1on1Module() {
-  const { currentBranch, employeeId, employeeName } = useBranch();
+  const { employeeId, employeeName } = useAuth();
   const [students, setStudents] = useState<Kids1on1Student[]>(() =>
     kidsService.getSnapshot1on1()
   );
+
+  useEffect(() => {
+    const handleUpdate = () => setStudents(kidsService.getSnapshot1on1());
+    window.addEventListener("excel-data-updated", handleUpdate);
+    return () => window.removeEventListener("excel-data-updated", handleUpdate);
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -111,21 +144,52 @@ export function KidsCoaching1on1Module() {
     setIsSubmitting(false);
   }, [studentToEdit, isFormOpen]);
 
-  // Filter logic: branch isolation + search by Parent Mobile Number + Month/Year
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
-      if (s.branchId && s.branchId !== currentBranch.id) return false;
-      if (searchQuery.trim()) {
-        const cleanQuery = searchQuery.trim().replace(/\D/g, "");
-        const cleanPhone = s.parentMobile.replace(/\D/g, "");
-        if (!cleanPhone.includes(cleanQuery)) return false;
+      if (searchQuery.trim() && !universalMatch(s, searchQuery)) {
+        return false;
       }
       if (selectedMonth !== "All" && s.month !== selectedMonth) return false;
       if (s.year !== selectedYear) return false;
       if (paymentMethodFilter !== "all" && s.paymentMethod !== paymentMethodFilter) return false;
       return true;
     });
-  }, [students, currentBranch.id, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
+  }, [students, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
+
+  const selectedStudents = useMemo(() => {
+    return students.filter((s) => selectedIds.includes(s.id));
+  }, [students, selectedIds]);
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const isAllCurrentSelected =
+    filteredStudents.length > 0 &&
+    filteredStudents.every((s) => selectedIds.includes(s.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllCurrentSelected) {
+      const cur = new Set(filteredStudents.map((s) => s.id));
+      setSelectedIds((prev) => prev.filter((id) => !cur.has(id)));
+    } else {
+      const cur = filteredStudents.map((s) => s.id);
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...cur])));
+    }
+  };
+
+  // Metrics
+  const metrics = useMemo(() => {
+    const total = filteredStudents.length;
+    const active = filteredStudents.filter((s) => s.status === "Active").length;
+    const completedSessions = filteredStudents.reduce((sum, s) => sum + (s.sessionsCompleted || 0), 0);
+    const totalDue = filteredStudents.reduce((sum, s) => sum + (s.dueAmount || 0), 0);
+    return { total, active, completedSessions, totalDue };
+  }, [filteredStudents]);
 
   // Save / Update Handler
   const handleSave = async (e: React.FormEvent) => {
@@ -232,8 +296,6 @@ export function KidsCoaching1on1Module() {
             remarks: remarks.trim(),
           },
           {
-            branchId: currentBranch.id,
-            branchName: currentBranch.name,
             employeeId,
             employeeName,
           }
@@ -256,39 +318,130 @@ export function KidsCoaching1on1Module() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Kids Coaching 1-1
             </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
-              📍 {currentBranch.name}
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              <Users className="w-3.5 h-3.5" />
+              <span>{filteredStudents.length} Records</span>
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Manage students enrolled in one-to-one coaching sessions at <span className="font-semibold text-slate-700">{currentBranch.name} Branch</span>.
+            Personalized one-on-one junior training sessions.
           </p>
         </div>
-        <div className="flex items-center gap-3 text-xs">
-          <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-600 font-medium shadow-2xs">
-            1-1 Students: <strong className="text-slate-900">{filteredStudents.length}</strong>
-          </span>
+
+        {/* Action Buttons: Export + Add Student */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <ExportDropdown
+            moduleName="Kids_Coaching_1on1"
+            moduleTitle="Kids Coaching 1-1 Registry"
+            subtitle="Facility 1-1 Student Registry"
+            columns={EXPORT_COLUMNS}
+            currentViewData={filteredStudents}
+            selectedData={selectedStudents}
+            entireModuleData={students}
+          />
+          <Button
+            onClick={() => {
+              setStudentToEdit(null);
+              setIsFormOpen(true);
+            }}
+            className="h-10 px-4 rounded-xl gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add 1-1 Student</span>
+          </Button>
         </div>
       </div>
 
-      {/* Top Action Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex-1">
-          <SearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search by Parent Mobile Number (e.g. 98765)..."
-          />
+      {/* 1. Standardized 4 KPI Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 1-1 Enrolled */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              1-1 Enrolled
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
+              {metrics.total}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Registered trainees
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6" />
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        {/* Active Squad */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Active Squad
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block">
+              {metrics.active}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Ongoing training slots
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+            <Award className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Sessions Delivered */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Sessions Delivered
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-indigo-600 mt-1 block">
+              {metrics.completedSessions}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Completed court hours
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+            <Calendar className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Pending Dues */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Pending Dues
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-rose-600 mt-1 block">
+              ₹{metrics.totalDue.toLocaleString()}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Uncollected balances
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+            <DollarSign className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Standardized Search & Filter Bar */}
+      <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <UniversalSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search by name, ID, phone, or email..."
+        />
+        <div className="flex items-center gap-2.5 flex-wrap">
           <PaymentMethodFilter
             value={paymentMethodFilter}
             onChange={setPaymentMethodFilter}
@@ -299,108 +452,92 @@ export function KidsCoaching1on1Module() {
             selectedYear={selectedYear}
             onYearChange={setSelectedYear}
           />
-          <Button
-            onClick={() => {
-              setStudentToEdit(null);
-              setIsFormOpen(true);
-            }}
-            className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold h-10 px-4 rounded-xl shadow-xs shrink-0 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Student</span>
-          </Button>
         </div>
       </div>
 
-      {/* Empty State */}
+      {/* 3. Interactive Data Table with Selection */}
       {filteredStudents.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-4">
-            <Users className="w-8 h-8 text-blue-500" />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900">No students found.</h3>
-          <p className="text-sm text-slate-500 max-w-sm mx-auto mt-1.5 mb-6">
-            No 1-1 students match the current filters.
-          </p>
-          <Button
-            onClick={() => {
-              setStudentToEdit(null);
-              setIsFormOpen(true);
-            }}
-            className="gap-2 bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Student</span>
-          </Button>
+          <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-slate-800">No 1-1 students found</h3>
+          <p className="text-xs text-slate-500 mt-1">Adjust filters or register a new 1-1 coaching student.</p>
         </div>
       ) : (
-        <>
-          {/* Desktop & Tablet Table (18 Columns) */}
-          <div className="hidden md:block rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-            <div className="overflow-x-auto max-h-[calc(100vh-280px)] scrollbar-thin">
-              <table className="w-full border-collapse text-left">
-                <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
-                  <tr>
-                    <th className="px-3 py-3 whitespace-nowrap">Serial No</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Student Name</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Parent Name</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Parent Mobile</th>
-                    <th className="px-3 py-3 text-center whitespace-nowrap">Age</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Coach</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Preferred Timing</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Session Package</th>
-                    <th className="px-3 py-3 text-center whitespace-nowrap">Completed</th>
-                    <th className="px-3 py-3 text-center whitespace-nowrap">Remaining</th>
-                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Fee Amount</th>
-                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Amount Paid</th>
-                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Due Amount</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Joining Date</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Status</th>
-                    <th className="px-3 py-3 whitespace-nowrap">Last Updated</th>
-                    <th className="px-3 py-3 text-right whitespace-nowrap sticky right-0 bg-slate-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.04)]">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white text-xs text-slate-700">
-                  {filteredStudents.map((s) => (
-                    <tr key={s.id} className="hover:bg-blue-50/40 transition-colors">
-                      <td className="px-3 py-3 font-mono font-medium text-slate-900 whitespace-nowrap">
-                        #{s.serialNumber}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+          <div className="overflow-x-auto max-h-[calc(100vh-320px)] scrollbar-thin">
+            <table className="w-full border-collapse text-left">
+              <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
+                <tr>
+                  <th className="px-3.5 py-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isAllCurrentSelected}
+                      onChange={handleToggleSelectAll}
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      title="Select All Records"
+                    />
+                  </th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Student Name</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Parent Details</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Coach</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Preferred Slot</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Package</th>
+                  <th className="px-3.5 py-3 text-center whitespace-nowrap">Sessions</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Total Fee</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Paid</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Due</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap sticky right-0 bg-slate-50">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200/80">
+                {filteredStudents.map((s, index) => {
+                  const isChecked = selectedIds.includes(s.id);
+                  return (
+                    <tr
+                      key={s.id}
+                      className={`hover:bg-slate-50/80 transition-colors text-xs text-slate-700 ${
+                        isChecked ? "bg-blue-50/40" : ""
+                      }`}
+                    >
+                      <td className="px-3.5 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleSelect(s.id)}
+                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
                       </td>
-                      <td className="px-3 py-3 font-semibold text-slate-900 whitespace-nowrap">
-                        {s.studentName}
+                      <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
+                        #{index + 1}
                       </td>
-                      <td className="px-3 py-3 text-slate-600 whitespace-nowrap">
-                        {s.parentName}
+                      <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
+                        {s.studentName} ({s.age}y, {s.gender})
                       </td>
-                      <td className="px-3 py-3 font-mono text-slate-600 whitespace-nowrap">
-                        {s.parentMobile}
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <div className="font-medium text-slate-800">{s.parentName}</div>
+                        <div className="text-[11px] font-mono text-slate-500">{s.parentMobile}</div>
                       </td>
-                      <td className="px-3 py-3 text-center whitespace-nowrap">
-                        {s.age}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap font-medium text-slate-800">
+                      <td className="px-3.5 py-3 whitespace-nowrap font-medium text-slate-800">
                         {s.coach}
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-slate-600 max-w-[160px] truncate" title={s.preferredTiming}>
+                      <td className="px-3.5 py-3 whitespace-nowrap max-w-[150px] truncate" title={s.preferredTiming}>
                         {s.preferredTiming}
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-slate-600">
+                      <td className="px-3.5 py-3 whitespace-nowrap text-slate-600">
                         {s.sessionPackage}
                       </td>
-                      <td className="px-3 py-3 text-center font-semibold text-blue-600 whitespace-nowrap">
-                        {s.sessionsCompleted}
+                      <td className="px-3.5 py-3 text-center whitespace-nowrap font-medium">
+                        <span className="text-blue-600 font-semibold">{s.sessionsCompleted}</span>
+                        <span className="text-slate-400"> / {s.totalSessions}</span>
                       </td>
-                      <td className="px-3 py-3 text-center font-semibold text-slate-700 whitespace-nowrap">
-                        {s.sessionsRemaining}
-                      </td>
-                      <td className="px-3 py-3 text-right font-semibold text-slate-900 whitespace-nowrap">
+                      <td className="px-3.5 py-3 text-right font-semibold text-slate-900 whitespace-nowrap">
                         ₹{s.feeAmount}
                       </td>
-                      <td className="px-3 py-3 text-right font-semibold text-emerald-600 whitespace-nowrap">
+                      <td className="px-3.5 py-3 text-right font-semibold text-emerald-600 whitespace-nowrap">
                         ₹{s.amountPaid}
                       </td>
                       <td className="px-3.5 py-3 text-right font-semibold text-rose-600 whitespace-nowrap">
@@ -412,21 +549,15 @@ export function KidsCoaching1on1Module() {
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         <PaymentBadge status={s.paymentStatus} />
                       </td>
-                      <td className="px-3.5 py-3 whitespace-nowrap text-slate-500">
-                        {s.joiningDate}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
+                      <td className="px-3.5 py-3 whitespace-nowrap">
                         <StatusBadge status={s.status} />
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-slate-400 text-[11px]">
-                        {new Date(s.updatedAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-right sticky right-0 bg-white/95 backdrop-blur-xs shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.04)]">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="px-3.5 py-3 whitespace-nowrap text-right sticky right-0 bg-white/95 backdrop-blur-xs">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => setViewingStudent(s)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
@@ -437,7 +568,7 @@ export function KidsCoaching1on1Module() {
                               setStudentToEdit(s);
                               setIsFormOpen(true);
                             }}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
                             title="Edit Record"
                           >
                             <Edit2 className="w-4 h-4" />
@@ -445,76 +576,12 @@ export function KidsCoaching1on1Module() {
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-
-          {/* Mobile Card Layout */}
-          <div className="md:hidden space-y-3.5">
-            {filteredStudents.map((s) => (
-              <Card key={s.id} className="border-slate-200/90 bg-white shadow-xs rounded-xl overflow-hidden">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <span className="font-bold text-slate-900">{s.studentName}</span>
-                      <p className="text-xs text-slate-500 font-mono mt-0.5">#{s.serialNumber}</p>
-                    </div>
-                    <StatusBadge status={s.status} />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="font-mono">{s.parentMobile}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 truncate">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{s.sessionsCompleted}/{s.totalSessions} Sessions</span>
-                    </div>
-                    <div className="col-span-2 text-[11px] text-slate-500 truncate">
-                      <span className="font-medium text-slate-700">Coach:</span> {s.coach} &bull; {s.preferredTiming}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <PaymentBadge status={s.paymentStatus} />
-                      <PaymentMethodBadge method={s.paymentMethod} />
-                      <span className="text-xs font-semibold text-slate-700">
-                        ₹{s.amountPaid} {s.dueAmount > 0 && <span className="text-rose-600 ml-1">Due: ₹{s.dueAmount}</span>}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setViewingStudent(s)}
-                        className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      >
-                        <Eye className="w-3.5 h-3.5 mr-1" />
-                        View
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setStudentToEdit(s);
-                          setIsFormOpen(true);
-                        }}
-                        className="h-8 px-2 text-xs text-slate-700 hover:text-slate-900"
-                      >
-                        <Edit2 className="w-3.5 h-3.5 mr-1" />
-                        Edit
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </>
+        </div>
       )}
 
       {/* View Details Drawer */}

@@ -1,7 +1,8 @@
 import React from "react";
 import {
-  LayoutDashboard,
-  CircleDollarSign,
+  ShoppingBag,
+  Package,
+  Receipt,
   GraduationCap,
   UserCheck,
   Dumbbell,
@@ -20,9 +21,19 @@ export interface NavigationItem {
 
 export const DASHBOARD_NAV_ITEMS: NavigationItem[] = [
   {
-    id: "sales",
-    label: "Sales",
-    icon: CircleDollarSign,
+    id: "pro-bd-shop",
+    label: "PRO BD Shop",
+    icon: ShoppingBag,
+  },
+  {
+    id: "inventory",
+    label: "Inventory",
+    icon: Package,
+  },
+  {
+    id: "purchase-history",
+    label: "Purchase History",
+    icon: Receipt,
   },
   {
     id: "kids-coaching",

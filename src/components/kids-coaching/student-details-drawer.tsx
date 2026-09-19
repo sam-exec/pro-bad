@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 
 interface StudentDetailsDrawerProps {
   student: Student | null;
+  serialNumber?: number;
   isOpen: boolean;
   onClose: () => void;
   onEdit: (student: Student) => void;
@@ -17,6 +18,7 @@ interface StudentDetailsDrawerProps {
 
 export function StudentDetailsDrawer({
   student,
+  serialNumber,
   isOpen,
   onClose,
   onEdit,
@@ -48,7 +50,7 @@ export function StudentDetailsDrawer({
                 <StatusBadge status={student.status} />
               </div>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
-                #{student.serialNumber}
+                {serialNumber !== undefined ? `#${serialNumber}` : student.studentId || "—"}
               </p>
             </div>
           </div>
@@ -75,7 +77,7 @@ export function StudentDetailsDrawer({
               <div>
                 <span className="text-slate-400 font-medium">Serial Number</span>
                 <p className="font-semibold text-slate-800 font-mono mt-0.5">
-                  #{student.serialNumber}
+                  {serialNumber !== undefined ? `#${serialNumber}` : "—"}
                 </p>
               </div>
               <div>

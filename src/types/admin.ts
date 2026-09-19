@@ -2,7 +2,10 @@ import React from "react";
 
 export type AdminModuleId =
   | "employees"
+  | "pro-bd-shop"
   | "sales"
+  | "inventory"
+  | "purchase-history"
   | "kids-coaching"
   | "kids-coaching-1-1"
   | "adults-coaching"
@@ -10,10 +13,8 @@ export type AdminModuleId =
   | "membership"
   | "flexible-membership"
   | "super-moms"
-  | "branches"
   | "reports"
-  | "audit-logs"
-  | "settings";
+  | "audit-logs";
 
 export interface AdminNavigationItem {
   id: AdminModuleId;
@@ -33,12 +34,10 @@ export type EmployeeStatus = "Active" | "Inactive";
 
 export interface AdminEmployee {
   id: string;
-  employeeId: string; // e.g. "NLG004", "MNK001"
+  employeeId: string;
   name: string;
   phone: string;
   email: string;
-  branchId: string; // e.g. "branch-nlg", "branch-mnk"
-  branchName: string; // "Nallagandla", "Manikonda"
   role: EmployeeRole;
   status: EmployeeStatus;
   joiningDate: string; // YYYY-MM-DD
@@ -54,24 +53,8 @@ export interface AdminAuditLog {
   id: string;
   employeeId: string;
   employeeName: string;
-  branchId: string;
-  branchName: string;
   action: string;
   module: string;
   timestamp: string;
   details?: string;
-}
-
-export interface BranchSummaryCardData {
-  branchId: string;
-  code: string;
-  name: string;
-  courtsCount: number;
-  employeesCount: number;
-  studentsCount: number;
-  activeMembershipsCount: number;
-  revenue: number;
-  status: "Active" | "Maintenance";
-  phone: string;
-  address: string;
 }

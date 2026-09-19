@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Plus, Users, Award, DollarSign } from "lucide-react";
 import { Student, StudentFormData } from "@/types/kids-coaching";
 import { kidsService } from "@/services/excel";
-import { SearchBar } from "@/components/kids-coaching/search-bar";
+import { UniversalSearch } from "@/components/ui/universal-search";
+import { universalMatch } from "@/lib/search";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
 import { StudentDetailsDrawer } from "@/components/kids-coaching/student-details-drawer";
 import { StudentFormModal } from "@/components/kids-coaching/student-form-modal";
@@ -14,23 +15,17 @@ import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { PaymentMethod } from "@/types/payment";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ExportDropdown } from "@/components/admin/common/export-dropdown";
 import { ExportColumn } from "@/utils/export-engine";
 import { Eye, Edit2 } from "lucide-react";
 
-interface AdminKidsCoachingProps {
-  selectedBranch: string; // "all" | "branch-nlg" | "branch-mnk"
-}
-
 const EXPORT_COLUMNS: ExportColumn<Student>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (r) => `#${r.serialNumber ?? ""}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
   { header: "Student Name", key: "studentName" },
   { header: "Parent Name", key: "parentName" },
   { header: "Mobile Number", key: "mobileNumber" },
   { header: "Age", key: "age" },
   { header: "Gender", key: "gender" },
-  { header: "Branch", key: "branchName", formatter: (r) => r.branchName || "Nallagandla" },
   { header: "Batch", key: "batch" },
   { header: "Coach", key: "coach" },
   { header: "Monthly Fee", key: "monthlyFee", formatter: (r) => `₹${r.monthlyFee}` },
@@ -43,8 +38,14 @@ const EXPORT_COLUMNS: ExportColumn<Student>[] = [
   { header: "Joining Date", key: "joiningDate" },
 ];
 
-export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
+export function AdminKidsCoaching() {
   const [students, setStudents] = useState<Student[]>(() => kidsService.getSnapshot());
+
+  useEffect(() => {
+    const handleUpdate = () => setStudents(kidsService.getSnapshot());
+    window.addEventListener("excel-data-updated", handleUpdate);
+    return () => window.removeEventListener("excel-data-updated", handleUpdate);
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -56,21 +57,12 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
 
-  // Filtered Students (Branch Filtering + Phone Search + Month/Year + Payment Method)
+  // Filtered Students (Phone Search + Month/Year + Payment Method)
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
-      // Branch filter: if not "all", match selectedBranch
-      if (selectedBranch !== "all" && student.branchId && student.branchId !== selectedBranch) {
-        return false;
-      }
-
       // Search by Mobile Number
-      if (searchQuery.trim()) {
-        const cleanQuery = searchQuery.trim().replace(/\D/g, "");
-        const cleanPhone = student.mobileNumber.replace(/\D/g, "");
-        if (!cleanPhone.includes(cleanQuery)) {
-          return false;
-        }
+      if (searchQuery.trim() && !universalMatch(student, searchQuery)) {
+        return false;
       }
 
       // Filter by Month
@@ -90,7 +82,7 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
 
       return true;
     });
-  }, [students, selectedBranch, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
+  }, [students, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
   // Selected students list for export
   const selectedStudents = useMemo(() => {
@@ -127,21 +119,21 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
     return { total, paidCount, totalDue, activeCount };
   }, [filteredStudents]);
 
-  const handleSaveStudent = async (formData: StudentFormData, studentId?: string) => {
-    const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
-    const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
+  const viewingSerialNumber = useMemo(() => {
+    if (!viewingStudent) return undefined;
+    const index = filteredStudents.findIndex((s) => s.id === viewingStudent.id);
+    return index >= 0 ? index + 1 : undefined;
+  }, [viewingStudent, filteredStudents]);
 
+  const handleSaveStudent = async (formData: StudentFormData, studentId?: string) => {
     if (studentId) {
       await kidsService.update(studentId, formData, "ADM001");
     } else {
       await kidsService.create(formData, {
-        branchId: targetBranchId,
-        branchName: targetBranchName,
         employeeId: "ADM001",
         employeeName: "Super Admin",
       });
     }
-    setStudents(kidsService.getSnapshot());
     setIsFormOpen(false);
     setStudentToEdit(null);
   };
@@ -161,7 +153,7 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Group coaching registry for junior badminton learners across academy branches.
+            Group coaching registry for junior badminton learners.
           </p>
         </div>
 
@@ -170,7 +162,7 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
           <ExportDropdown
             moduleName="Kids_Coaching"
             moduleTitle="Kids Coaching Registry"
-            subtitle={`Branch Filter: ${selectedBranch === "all" ? "All Branches" : selectedBranch}`}
+            subtitle="Administrative Export"
             columns={EXPORT_COLUMNS}
             currentViewData={filteredStudents}
             selectedData={selectedStudents}
@@ -181,7 +173,7 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
               setStudentToEdit(null);
               setIsFormOpen(true);
             }}
-            className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer"
+            className="h-10 px-4 rounded-xl gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Student</span>
@@ -190,62 +182,86 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
       </div>
 
       {/* Summary Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Filtered Students</p>
-              <h3 className="text-xl font-bold text-slate-900">{metrics.total}</h3>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Students */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Total Students
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
+              {metrics.total}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Filtered coaching roster
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-              <Award className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Active Enrolled</p>
-              <h3 className="text-xl font-bold text-emerald-600">{metrics.activeCount}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Active Enrolled */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Active Enrolled
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block">
+              {metrics.activeCount}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Regular batch attendees
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+            <Award className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-              <DollarSign className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Fully Paid</p>
-              <h3 className="text-xl font-bold text-purple-600">{metrics.paidCount}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Fully Paid */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Fees Settled
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-purple-600 mt-1 block">
+              {metrics.paidCount}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              No outstanding balance
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+            <DollarSign className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-              <DollarSign className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Total Due</p>
-              <h3 className="text-xl font-bold text-rose-600">₹{metrics.totalDue}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Total Due */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Outstanding Dues
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-rose-600 mt-1 block">
+              ₹{metrics.totalDue}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Pending monthly collection
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+            <DollarSign className="w-6 h-6" />
+          </div>
+        </div>
       </div>
 
       {/* Filter Controls Bar */}
       <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <SearchBar
+        <UniversalSearch
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by student mobile number..."
+          placeholder="Search by name, ID, phone, or email..."
         />
         <div className="flex items-center gap-2.5 flex-wrap">
           <PaymentMethodFilter
@@ -267,7 +283,7 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
           <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
           <h3 className="text-base font-bold text-slate-800">No student records found</h3>
           <p className="text-xs text-slate-500 mt-1">
-            Try adjusting your search criteria or branch filter.
+            Try adjusting your search criteria.
           </p>
         </div>
       ) : (
@@ -291,7 +307,6 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
                   <th className="px-3.5 py-3 whitespace-nowrap">Parent Name</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mobile</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Age/Gender</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Branch</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Batch</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Coach</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Monthly Fee</th>
@@ -304,7 +319,7 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/80">
-                {filteredStudents.map((student) => {
+                {filteredStudents.map((student, index) => {
                   const isChecked = selectedIds.includes(student.id);
                   return (
                     <tr
@@ -323,7 +338,7 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        #{student.serialNumber}
+                        #{index + 1}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {student.studentName}
@@ -336,11 +351,6 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         {student.age} yrs • {student.gender}
-                      </td>
-                      <td className="px-3.5 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                          {student.branchName || "Nallagandla"}
-                        </span>
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap max-w-[150px] truncate" title={student.batch}>
                         {student.batch}
@@ -401,6 +411,7 @@ export function AdminKidsCoaching({ selectedBranch }: AdminKidsCoachingProps) {
       {/* Slide-over Drawer */}
       <StudentDetailsDrawer
         student={viewingStudent}
+        serialNumber={viewingSerialNumber}
         isOpen={Boolean(viewingStudent)}
         onClose={() => setViewingStudent(null)}
         onEdit={(student) => {

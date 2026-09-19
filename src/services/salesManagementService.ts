@@ -6,6 +6,7 @@ import {
   AdminSalesSummary,
   SalesProduct,
 } from "@/types/sales";
+import { inventoryService } from "./inventoryService";
 
 const STORAGE_KEY = "pro_badminton_sales_transactions_v2";
 
@@ -46,17 +47,15 @@ const INITIAL_SALES: SaleTransaction[] = [
     ],
     grandTotal: 249,
     paymentMethod: "UPI",
-    employeeId: "NLG004",
+    employeeId: "EMP001",
     employeeName: "Rahul Sharma",
-    branchId: "branch-nlg",
-    branchName: "Nallagandla",
     date: "2026-09-13",
     time: "10:30:00",
     createdAt: "2026-09-13T10:30:00Z",
   },
   {
     id: "sale-tx-002",
-    invoiceNumber: "INV-NLG-20260913-002",
+    invoiceNumber: "INV-20260913-002",
     customerName: "Kavita Nair",
     customerPhone: "9876502345",
     items: [
@@ -81,118 +80,110 @@ const INITIAL_SALES: SaleTransaction[] = [
     ],
     grandTotal: 159,
     paymentMethod: "Cash",
-    employeeId: "NLG004",
+    employeeId: "EMP001",
     employeeName: "Rahul Sharma",
-    branchId: "branch-nlg",
-    branchName: "Nallagandla",
     date: "2026-09-13",
     time: "12:15:00",
     createdAt: "2026-09-13T12:15:00Z",
   },
   {
     id: "sale-tx-003",
-    invoiceNumber: "INV-NLG-20260912-003",
+    invoiceNumber: "INV-20260912-003",
     customerName: "Aditya Roy",
     customerPhone: "9876503456",
     items: [
       {
         id: "item-6",
-        product: "FEATHER SHUTTLES",
-        brandModel: "Aerosensa 30",
-        sizeVariant: "Tube of 12 - Speed 77",
-        quantity: 3,
-        unitPrice: 38,
-        lineTotal: 114,
+        product: "RACQUET",
+        brandModel: "Li-Ning Axforce 80",
+        sizeVariant: "4U G5",
+        quantity: 1,
+        unitPrice: 195,
+        lineTotal: 195,
       },
       {
         id: "item-7",
-        product: "WRISTBAND",
-        brandModel: "Yonex Terry",
-        sizeVariant: "Double Wide White",
-        quantity: 2,
-        unitPrice: 5.5,
-        lineTotal: 11,
+        product: "SHUTTLE COCKS",
+        brandModel: "Victor Master No.1",
+        sizeVariant: "Speed 77 - Tube of 12",
+        quantity: 3,
+        unitPrice: 28,
+        lineTotal: 84,
       },
     ],
-    grandTotal: 125,
+    grandTotal: 279,
     paymentMethod: "UPI",
-    employeeId: "NLG004",
+    employeeId: "EMP001",
     employeeName: "Rahul Sharma",
-    branchId: "branch-nlg",
-    branchName: "Nallagandla",
     date: "2026-09-12",
-    time: "16:45:00",
-    createdAt: "2026-09-12T16:45:00Z",
+    time: "16:40:00",
+    createdAt: "2026-09-12T16:40:00Z",
   },
   {
     id: "sale-tx-004",
-    invoiceNumber: "INV-MNK-20260913-004",
-    customerName: "Meera Krishnan",
-    customerPhone: "9823450001",
+    invoiceNumber: "INV-20260911-004",
+    customerName: "Pooja Hegde",
+    customerPhone: "9876504567",
     items: [
       {
         id: "item-8",
-        product: "KIT BAG",
-        brandModel: "Pro 9-Racquet Thermo",
-        sizeVariant: "Midnight Black",
-        quantity: 1,
-        unitPrice: 95,
-        lineTotal: 95,
+        product: "TOWELS",
+        brandModel: "Microfiber Sport",
+        sizeVariant: "Navy Blue",
+        quantity: 2,
+        unitPrice: 15,
+        lineTotal: 30,
       },
       {
         id: "item-9",
-        product: "T-SHIRTS",
-        brandModel: "Dry-Cool Tournament Jersey",
-        sizeVariant: "Size L - Blue",
-        quantity: 2,
-        unitPrice: 28,
-        lineTotal: 56,
+        product: "WATER BOTTLE",
+        brandModel: "Stainless Steel 750ml",
+        sizeVariant: "Matte Black",
+        quantity: 1,
+        unitPrice: 22,
+        lineTotal: 22,
       },
     ],
-    grandTotal: 151,
-    paymentMethod: "UPI",
-    employeeId: "MNK001",
-    employeeName: "Vikram Reddy",
-    branchId: "branch-mnk",
-    branchName: "Manikonda",
-    date: "2026-09-13",
-    time: "11:20:00",
-    createdAt: "2026-09-13T11:20:00Z",
+    grandTotal: 52,
+    paymentMethod: "Cash",
+    employeeId: "EMP001",
+    employeeName: "Rahul Sharma",
+    date: "2026-09-11",
+    time: "18:20:00",
+    createdAt: "2026-09-11T18:20:00Z",
   },
   {
     id: "sale-tx-005",
-    invoiceNumber: "INV-MNK-20260911-005",
-    customerName: "Deepak Chawla",
-    customerPhone: "9823450003",
+    invoiceNumber: "INV-20260910-005",
+    customerName: "Rohan Kulkarni",
+    customerPhone: "9876505678",
     items: [
       {
         id: "item-10",
-        product: "SHUTTLE COCKS",
-        brandModel: "Mavis 350",
-        sizeVariant: "Tube of 6 - Yellow",
-        quantity: 4,
-        unitPrice: 16.5,
-        lineTotal: 66,
+        product: "KIT BAG",
+        brandModel: "Pro 9-Racquet Thermo",
+        sizeVariant: "Red/Black",
+        quantity: 1,
+        unitPrice: 85,
+        lineTotal: 85,
       },
       {
         id: "item-11",
         product: "GP-18",
-        brandModel: "Victor GP-18",
+        brandModel: "Victor Overgrip",
         sizeVariant: "Black",
         quantity: 3,
-        unitPrice: 7,
-        lineTotal: 21,
+        unitPrice: 4.5,
+        lineTotal: 13.5,
       },
     ],
-    grandTotal: 87,
-    paymentMethod: "Cash",
-    employeeId: "MNK001",
-    employeeName: "Vikram Reddy",
-    branchId: "branch-mnk",
-    branchName: "Manikonda",
-    date: "2026-09-11",
-    time: "18:00:00",
-    createdAt: "2026-09-11T18:00:00Z",
+    grandTotal: 98.5,
+    paymentMethod: "UPI",
+    employeeId: "EMP001",
+    employeeName: "Rahul Sharma",
+    date: "2026-09-10",
+    time: "14:10:00",
+    createdAt: "2026-09-10T14:10:00Z",
   },
 ];
 
@@ -212,8 +203,8 @@ class SalesManagementService {
           this.sales = JSON.parse(stored);
           return;
         }
-      } catch (e) {
-        console.error("Failed to load sales from localStorage", e);
+      } catch {
+        // Fall back to initial dataset
       }
     }
     this.sales = [...INITIAL_SALES];
@@ -223,8 +214,8 @@ class SalesManagementService {
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.sales));
-      } catch (e) {
-        console.error("Failed to save sales to localStorage", e);
+      } catch {
+        // Silently ignore storage quota or private browsing errors
       }
     }
   }
@@ -235,11 +226,14 @@ class SalesManagementService {
   }
 
   private notify() {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("sales-data-updated"));
+    }
     this.listeners.forEach((cb) => {
       try {
         cb();
-      } catch (err) {
-        console.error(err);
+      } catch {
+        // Ignore subscriber errors
       }
     });
   }
@@ -262,24 +256,30 @@ class SalesManagementService {
     paymentMethod: "Cash" | "UPI";
     employeeId: string;
     employeeName: string;
-    branchId: string;
-    branchName: string;
   }): SaleTransaction {
+    // 1. Stock validation - never allow inventory below zero
+    for (const item of payload.items) {
+      const needed = Number(item.quantity) || 1;
+      const stock = inventoryService.checkStock(item.product, needed);
+      if (!stock.available) {
+        throw new Error(
+          `Insufficient stock for "${item.product}"! Available: ${stock.currentStock}, Requested: ${needed}.`
+        );
+      }
+    }
+
     const now = new Date();
     const dateStr = this.getTodayDateString();
     const timeStr = now.toTimeString().split(" ")[0]; // HH:mm:ss
     const timestamp = now.toISOString();
 
-    const branchPrefix = payload.branchName
-      ? payload.branchName.substring(0, 3).toUpperCase()
-      : "BRN";
     const count = this.sales.length + 1;
-    const invoiceNumber = `INV-${branchPrefix}-${dateStr.replace(/-/g, "")}-${String(count).padStart(3, "0")}`;
-    const id = `sale-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const invoiceNumber = `INV-${dateStr.replace(/-/g, "")}-${String(count).padStart(3, "0")}`;
+    const id = `sale-${crypto.randomUUID()}`;
 
-    const processedItems: SaleLineItem[] = payload.items.map((item, idx) => ({
+    const processedItems: SaleLineItem[] = payload.items.map((item) => ({
       ...item,
-      id: `item-${Date.now()}-${idx}`,
+      id: `item-${crypto.randomUUID()}`,
       lineTotal: Math.round(item.quantity * item.unitPrice * 100) / 100,
     }));
 
@@ -295,8 +295,6 @@ class SalesManagementService {
       paymentMethod: payload.paymentMethod,
       employeeId: payload.employeeId,
       employeeName: payload.employeeName,
-      branchId: payload.branchId,
-      branchName: payload.branchName,
       date: dateStr,
       time: timeStr,
       createdAt: timestamp,
@@ -304,6 +302,12 @@ class SalesManagementService {
 
     this.sales.unshift(newSale);
     this.saveToStorage();
+
+    // 2. Automatically deduct stock in Inventory
+    for (const item of processedItems) {
+      inventoryService.recordSale(item.product, item.quantity);
+    }
+
     this.notify();
     return newSale;
   }
@@ -336,10 +340,6 @@ class SalesManagementService {
     options: SalesFilterOptions
   ): SaleTransaction[] {
     let result = [...records];
-
-    if (options.branchId && options.branchId !== "all") {
-      result = result.filter((s) => s.branchId === options.branchId);
-    }
 
     if (options.employeeId && options.employeeId !== "all") {
       result = result.filter((s) => s.employeeId === options.employeeId);
@@ -427,11 +427,8 @@ class SalesManagementService {
   /**
    * Admin dashboard top stats
    */
-  public getAdminSummary(branchId?: string): AdminSalesSummary {
-    let list = this.sales;
-    if (branchId && branchId !== "all") {
-      list = list.filter((s) => s.branchId === branchId);
-    }
+  public getAdminSummary(): AdminSalesSummary {
+    const list = this.sales;
 
     const totalTransactions = list.length;
     const totalProductsSold = list.reduce(
@@ -446,7 +443,6 @@ class SalesManagementService {
       {
         employeeId: string;
         employeeName: string;
-        branchName: string;
         transactionCount: number;
         productsSold: number;
         totalAmount: number;
@@ -457,7 +453,6 @@ class SalesManagementService {
       const existing = empMap.get(s.employeeId) || {
         employeeId: s.employeeId,
         employeeName: s.employeeName,
-        branchName: s.branchName,
         transactionCount: 0,
         productsSold: 0,
         totalAmount: 0,
@@ -468,38 +463,11 @@ class SalesManagementService {
       empMap.set(s.employeeId, existing);
     });
 
-    // Branch-wise aggregation
-    const branchMap = new Map<
-      string,
-      {
-        branchId: string;
-        branchName: string;
-        transactionCount: number;
-        productsSold: number;
-        totalAmount: number;
-      }
-    >();
-
-    list.forEach((s) => {
-      const existing = branchMap.get(s.branchId) || {
-        branchId: s.branchId,
-        branchName: s.branchName,
-        transactionCount: 0,
-        productsSold: 0,
-        totalAmount: 0,
-      };
-      existing.transactionCount += 1;
-      existing.productsSold += s.items.reduce((sum, i) => sum + i.quantity, 0);
-      existing.totalAmount += s.grandTotal;
-      branchMap.set(s.branchId, existing);
-    });
-
     return {
       totalTransactions,
       totalProductsSold,
       totalSalesAmount: Math.round(totalSalesAmount * 100) / 100,
       employeeSummary: Array.from(empMap.values()),
-      branchSummary: Array.from(branchMap.values()),
     };
   }
 

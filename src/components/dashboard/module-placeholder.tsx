@@ -2,14 +2,14 @@ import React from "react";
 import { Construction } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { NavigationItem } from "./types";
-import { useBranch } from "@/context/branch-context";
+import { useAuth } from "@/context/auth-context";
 
 interface ModulePlaceholderProps {
   item: NavigationItem;
 }
 
 export function ModulePlaceholder({ item }: ModulePlaceholderProps) {
-  const { currentBranch, employeeId, employeeName } = useBranch();
+  const { employeeId, employeeName } = useAuth();
   const Icon = item.icon;
 
   return (
@@ -26,17 +26,13 @@ export function ModulePlaceholder({ item }: ModulePlaceholderProps) {
                 {item.label}
               </h1>
               <p className="text-sm text-slate-500 mt-0.5">
-                {item.label} module for <span className="font-semibold text-slate-700">{currentBranch.name} Branch</span>.
+                {item.label} module for <span className="font-semibold text-slate-700">PRO Badminton Academy</span>.
               </p>
             </div>
           </div>
 
-          {/* Branch & Operator Badge */}
+          {/* Operator Badge */}
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-              <span>📍</span>
-              <span>{currentBranch.name}</span>
-            </span>
             <span className="text-xs text-slate-400 font-mono">
               Emp: {employeeId}
             </span>
@@ -54,14 +50,13 @@ export function ModulePlaceholder({ item }: ModulePlaceholderProps) {
             {item.label} Module In Development
           </CardTitle>
           <CardDescription className="text-slate-500 max-w-md mt-2 text-sm">
-            This module is part of the next development phase. All records created here will automatically bind to{" "}
-            <span className="font-semibold text-slate-700">{currentBranch.name} ({currentBranch.id})</span> and operator{" "}
+            This module is part of the next development phase. All records created here will automatically bind to operator{" "}
             <span className="font-semibold text-slate-700">{employeeName} ({employeeId})</span>.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0 pt-6">
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-            Multi-Branch Isolation Ready
+            Single Facility System
           </span>
         </CardContent>
       </Card>

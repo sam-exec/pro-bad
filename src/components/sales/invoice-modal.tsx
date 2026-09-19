@@ -73,7 +73,7 @@ export function InvoiceModal({ invoice, onClose }: InvoiceModalProps) {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                {invoice.branchName} Branch • Enterprise Sports Retail
+                Enterprise Sports Retail &amp; Academy
               </p>
             </div>
 
@@ -124,7 +124,7 @@ export function InvoiceModal({ invoice, onClose }: InvoiceModalProps) {
           {/* Line Items Table */}
           <div className="border border-slate-200 rounded-xl overflow-hidden">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase font-bold">
+              <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
                 <tr>
                   <th className="py-2.5 px-3">Item &amp; Variant</th>
                   <th className="py-2.5 px-3 text-center">Qty</th>
@@ -134,7 +134,7 @@ export function InvoiceModal({ invoice, onClose }: InvoiceModalProps) {
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                 {invoice.items.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50">
+                  <tr key={item.variantId || item.sku || `item-${idx}`} className="hover:bg-slate-50/50">
                     <td className="py-2.5 px-3">
                       <div className="font-bold text-slate-900 text-xs">
                         {item.productName}

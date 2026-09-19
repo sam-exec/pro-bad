@@ -70,10 +70,11 @@ export function StudentTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {students.map((student) => (
+              {students.map((student, index) => (
                 <StudentRow
                   key={student.id}
                   student={student}
+                  serialNumber={index + 1}
                   onView={onView}
                   onEdit={onEdit}
                 />
@@ -85,7 +86,7 @@ export function StudentTable({
 
       {/* Mobile Card View (Shown on screens < 768px) */}
       <div className="md:hidden space-y-3.5">
-        {students.map((student) => (
+        {students.map((student, index) => (
           <Card
             key={student.id}
             className="border-slate-200/90 bg-white shadow-xs rounded-xl overflow-hidden"
@@ -103,7 +104,7 @@ export function StudentTable({
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 font-mono mt-0.5">
-                    #{student.serialNumber}
+                    #{index + 1}
                   </p>
                 </div>
                 <StatusBadge status={student.status} />

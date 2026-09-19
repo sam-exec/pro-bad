@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Plus, Users, Medal, DollarSign, Calendar, Eye, Edit2, X, AlertCircle } from "lucide-react";
 import { Adult1on1Member, SESSION_PACKAGES, TIMING_SLOTS_1ON1 } from "@/types/coaching-modules";
 import { COACHES, Gender, StudentStatus, PaymentStatus } from "@/types/kids-coaching";
@@ -8,28 +8,23 @@ import { PaymentMethod } from "@/types/payment";
 import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { adultsService } from "@/services/excel";
-import { SearchBar } from "@/components/kids-coaching/search-bar";
+import { UniversalSearch } from "@/components/ui/universal-search";
+import { universalMatch } from "@/lib/search";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
 import { PaymentBadge } from "@/components/kids-coaching/payment-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { ExportDropdown } from "@/components/admin/common/export-dropdown";
 import { ExportColumn } from "@/utils/export-engine";
 
-interface AdminAdultsCoaching1on1Props {
-  selectedBranch: string; // "all" | "branch-nlg" | "branch-mnk"
-}
-
 const EXPORT_COLUMNS: ExportColumn<Adult1on1Member>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (r) => `#${r.serialNumber ?? ""}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
   { header: "Member Name", key: "memberName" },
   { header: "Mobile", key: "mobileNumber" },
   { header: "Age", key: "age" },
   { header: "Gender", key: "gender" },
-  { header: "Branch", key: "branchName", formatter: (r) => r.branchName || "Nallagandla" },
   { header: "Coach", key: "coach" },
   { header: "Timing Slot", key: "preferredTiming" },
   { header: "Session Package", key: "sessionPackage" },
@@ -44,10 +39,16 @@ const EXPORT_COLUMNS: ExportColumn<Adult1on1Member>[] = [
   { header: "Joining Date", key: "joiningDate" },
 ];
 
-export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1on1Props) {
+export function AdminAdultsCoaching1on1() {
   const [members, setMembers] = useState<Adult1on1Member[]>(() =>
     adultsService.getSnapshot1on1()
   );
+
+  useEffect(() => {
+    const handleUpdate = () => setMembers(adultsService.getSnapshot1on1());
+    window.addEventListener("excel-data-updated", handleUpdate);
+    return () => window.removeEventListener("excel-data-updated", handleUpdate);
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -96,13 +97,8 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
 
   const filteredMembers = useMemo(() => {
     return members.filter((m) => {
-      if (selectedBranch !== "all" && m.branchId && m.branchId !== selectedBranch) {
+      if (searchQuery.trim() && !universalMatch(m, searchQuery)) {
         return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.trim().replace(/\D/g, "");
-        const cleanPhone = m.mobileNumber.replace(/\D/g, "");
-        if (!cleanPhone.includes(q)) return false;
       }
       if (selectedMonth !== "All" && m.month !== selectedMonth) {
         return false;
@@ -115,7 +111,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
       }
       return true;
     });
-  }, [members, selectedBranch, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
+  }, [members, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
   const selectedMembers = useMemo(() => {
     return members.filter((m) => selectedIds.includes(m.id));
@@ -207,8 +203,6 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
       return;
     }
 
-    const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
-    const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
     const fee = Number(formData.feeAmount) || 0;
     const paid = Number(formData.paidAmount) || 0;
     const dueAmount = Math.max(0, fee - paid);
@@ -253,8 +247,6 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
             sessionsRemaining: numTotal,
           },
           {
-            branchId: targetBranchId,
-            branchName: targetBranchName,
             employeeId: "ADM001",
             employeeName: "Super Admin",
           }
@@ -297,7 +289,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
           <ExportDropdown
             moduleName="Adults_Coaching_1on1"
             moduleTitle="Adults Coaching 1-1 Registry"
-            subtitle={`Branch: ${selectedBranch === "all" ? "All Branches" : selectedBranch}`}
+            subtitle="Facility Registry"
             columns={EXPORT_COLUMNS}
             currentViewData={filteredMembers}
             selectedData={selectedMembers}
@@ -305,7 +297,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
           />
           <Button
             onClick={handleOpenAdd}
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer"
+            className="h-10 px-4 rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add 1-1 Player</span>
@@ -313,63 +305,87 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
         </div>
       </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">1-1 Trainees</p>
-              <h3 className="text-xl font-bold text-slate-900">{metrics.total}</h3>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 1-1 Trainees */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              1-1 Trainees
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
+              {metrics.total}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Private coaching roster
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-              <Medal className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Active Players</p>
-              <h3 className="text-xl font-bold text-blue-600">{metrics.active}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Active Players */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Active Players
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-blue-600 mt-1 block">
+              {metrics.active}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Regular 1-1 bookings
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+            <Medal className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Completed Sessions</p>
-              <h3 className="text-xl font-bold text-purple-600">{metrics.sessions}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Completed Sessions */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Completed Sessions
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-purple-600 mt-1 block">
+              {metrics.sessions}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Private court training
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+            <Calendar className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-              <DollarSign className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Pending Dues</p>
-              <h3 className="text-xl font-bold text-rose-600">₹{metrics.totalDue}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Pending Dues */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Pending Dues
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-rose-600 mt-1 block">
+              ₹{metrics.totalDue}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Unsettled fees
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+            <DollarSign className="w-6 h-6" />
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <SearchBar
+        <UniversalSearch
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by player mobile number..."
+          placeholder="Search by name, ID, phone, or email..."
         />
         <div className="flex items-center gap-2.5 flex-wrap">
           <PaymentMethodFilter
@@ -410,7 +426,6 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                   <th className="px-3.5 py-3 whitespace-nowrap">Player Name</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mobile</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Age/Gender</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Branch</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Coach</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Timing Slot</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Package</th>
@@ -425,7 +440,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/80">
-                {filteredMembers.map((m) => {
+                {filteredMembers.map((m, index) => {
                   const isChecked = selectedIds.includes(m.id);
                   return (
                     <tr
@@ -443,7 +458,7 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        #{m.serialNumber}
+                        #{index + 1}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {m.memberName}
@@ -453,11 +468,6 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         {m.age} yrs • {m.gender}
-                      </td>
-                      <td className="px-3.5 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                          {m.branchName || "Nallagandla"}
-                        </span>
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap font-medium text-slate-800">
                         {m.coach}
@@ -550,7 +560,6 @@ export function AdminAdultsCoaching1on1({ selectedBranch }: AdminAdultsCoaching1
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                 <div className="flex justify-between"><span className="text-slate-500">Mobile:</span><span className="font-mono font-semibold text-slate-800">{viewingMember.mobileNumber}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Age / Gender:</span><span className="font-semibold text-slate-800">{viewingMember.age}y, {viewingMember.gender}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Branch:</span><span className="font-semibold text-slate-800">{viewingMember.branchName || "Nallagandla"}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Coach:</span><span className="font-semibold text-slate-800">{viewingMember.coach}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Timing Slot:</span><span className="font-semibold text-slate-800">{viewingMember.preferredTiming}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Package:</span><span className="font-semibold text-slate-800">{viewingMember.sessionPackage}</span></div>

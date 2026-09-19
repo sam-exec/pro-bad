@@ -7,18 +7,24 @@
 
 /**
  * Standard hidden metadata fields present on every record across all workbooks.
- * Essential for multi-branch data isolation, audit trails, and future synchronization.
+ * Essential for audit trails and future synchronization.
  * (Hidden from the UI, managed automatically by the service layer).
  */
 export interface ExcelRecordMeta {
   recordId?: string;      // Unique record identifier (maps to id / Record ID)
-  branchId: string;       // Branch ID (e.g., "branch-nlg", "branch-mnk")
-  branchName: string;     // Branch Name (e.g., "Nallagandla", "Manikonda")
   employeeId: string;     // Stamped employee ID of creator/assignee
   employeeName: string;   // Stamped employee name
   createdAt: string;      // ISO 8601 Timestamp of creation
   updatedAt: string;      // ISO 8601 Timestamp of last modification
   lastModifiedBy: string; // Employee ID of user who last modified the record
+}
+
+export interface EmployeeAuditMeta {
+  employeeId: string;
+  employeeName: string;
+  createdAt?: string;
+  updatedAt?: string;
+  lastModifiedBy?: string;
 }
 
 /**
@@ -83,7 +89,6 @@ export const EXCEL_WORKSHEETS = {
 } as const;
 
 export interface ExcelQueryOptions {
-  branchId?: string;
   searchQuery?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";

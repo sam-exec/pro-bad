@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useBranch } from "@/context/branch-context";
+import { useAuth } from "@/context/auth-context";
 import {
   SALES_PRODUCT_LIST,
   SaleLineItem,
@@ -10,6 +10,7 @@ import {
   SalesDateFilter,
 } from "@/types/sales";
 import { salesManagementService } from "@/services/salesManagementService";
+import { inventoryService } from "@/services/inventoryService";
 import {
   Plus,
   Trash2,
@@ -26,12 +27,16 @@ import {
   Clock,
   MapPin,
   Check,
+  ShoppingBag,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
+import { UniversalSearch } from "@/components/ui/universal-search";
 
 interface LineItemFormState {
+  id: string;
   product: string;
   brandModel: string;
   sizeVariant: string;
@@ -40,19 +45,48 @@ interface LineItemFormState {
 }
 
 export function EmployeeSalesModule() {
-  const { currentBranch, employeeId, employeeName } = useBranch();
+  const { employeeId, employeeName } = useAuth();
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const [currentDate, setCurrentDate] = useState("Today (Live)");
 
-  // Subscribe to sales service and set live date
+  // Subscribe to sales service and inventory service
   useEffect(() => {
     setCurrentDate(`${new Date().toLocaleDateString()} (Live)`);
-    const unsub = salesManagementService.subscribe(() => {
+    const unsubSales = salesManagementService.subscribe(() => {
       setUpdateTrigger((t) => t + 1);
     });
-    return () => unsub();
+    const unsubInv = inventoryService.subscribe(() => {
+      setUpdateTrigger((t) => t + 1);
+    });
+    return () => {
+      unsubSales();
+      unsubInv();
+    };
   }, []);
 
+  // Available products from inventory
+  const inventoryItems = useMemo(() => {
+    return inventoryService.getInventory();
+  }, [updateTrigger]);
+
+  const availableProducts = useMemo(() => {
+    if (inventoryItems.length > 0) {
+      return inventoryItems.map((i) => ({
+        name: i.productName,
+        price: i.sellingPrice,
+        currentStock: i.currentStock,
+        sku: i.sku,
+        status: i.status,
+      }));
+    }
+    return SALES_PRODUCT_LIST.map((prod) => ({
+      name: prod,
+      price: 0,
+      currentStock: 10,
+      sku: "",
+      status: "In Stock" as const,
+    }));
+  }, [inventoryItems]);
 
   // Record Form States
   const [customerName, setCustomerName] = useState("");
@@ -60,6 +94,7 @@ export function EmployeeSalesModule() {
   const [paymentMethod, setPaymentMethod] = useState<SalesPaymentMethod>("UPI");
   const [items, setItems] = useState<LineItemFormState[]>([
     {
+      id: crypto.randomUUID(),
       product: SALES_PRODUCT_LIST[0],
       brandModel: "",
       sizeVariant: "",
@@ -94,14 +129,17 @@ export function EmployeeSalesModule() {
 
   // Handle line item modifications
   const handleAddItem = () => {
+    const defaultProduct = availableProducts[0]?.name || SALES_PRODUCT_LIST[0];
+    const defaultPrice = availableProducts[0]?.price || 0;
     setItems((prev) => [
       ...prev,
       {
-        product: SALES_PRODUCT_LIST[0],
+        id: crypto.randomUUID(),
+        product: defaultProduct,
         brandModel: "",
         sizeVariant: "",
         quantity: 1,
-        unitPrice: 0,
+        unitPrice: defaultPrice,
       },
     ]);
   };
@@ -122,12 +160,21 @@ export function EmployeeSalesModule() {
   ) => {
     setItems((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [field]: value };
+      if (field === "product") {
+        const found = availableProducts.find((p) => p.name === value);
+        next[index] = {
+          ...next[index],
+          product: value,
+          unitPrice: found ? found.price : next[index].unitPrice,
+        };
+      } else {
+        next[index] = { ...next[index], [field]: value };
+      }
       return next;
     });
   };
 
-  // Submit Sale
+  // Submit Sale / Complete Purchase
   const handleSaveSale = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -150,6 +197,18 @@ export function EmployeeSalesModule() {
       return;
     }
 
+    // Inventory Stock Validation Guard (Strict: Never allow negative inventory)
+    for (const item of items) {
+      const q = Number(item.quantity) || 1;
+      const stockCheck = inventoryService.checkStock(item.product, q);
+      if (!stockCheck.available) {
+        setErrorMessage(
+          `Insufficient inventory stock for "${item.product}". Current stock: ${stockCheck.currentStock} units. Purchase cannot exceed available stock.`
+        );
+        return;
+      }
+    }
+
     try {
       const saved = salesManagementService.createSale({
         customerName: customerName.trim(),
@@ -164,28 +223,29 @@ export function EmployeeSalesModule() {
         paymentMethod,
         employeeId,
         employeeName,
-        branchId: currentBranch.id,
-        branchName: currentBranch.name,
       });
 
       setSuccessMessage(
-        `Sale recorded successfully! Invoice #${saved.invoiceNumber} — Total: ₹${saved.grandTotal.toFixed(2)} (${saved.paymentMethod})`
+        `Transaction completed successfully! Invoice #${saved.invoiceNumber} — Total: ₹${saved.grandTotal.toFixed(2)} (${saved.paymentMethod}). Inventory updated.`
       );
 
       // Reset form
+      const defProd = availableProducts[0]?.name || SALES_PRODUCT_LIST[0];
+      const defPrice = availableProducts[0]?.price || 0;
       setCustomerName("");
       setCustomerPhone("");
       setItems([
         {
-          product: SALES_PRODUCT_LIST[0],
+          id: crypto.randomUUID(),
+          product: defProd,
           brandModel: "",
           sizeVariant: "",
           quantity: 1,
-          unitPrice: 0,
+          unitPrice: defPrice,
         },
       ]);
     } catch (err: any) {
-      setErrorMessage(err.message || "Failed to record sale.");
+      setErrorMessage(err.message || "Failed to record transaction.");
     }
   };
 
@@ -269,7 +329,6 @@ export function EmployeeSalesModule() {
       "Payment Method",
       "Employee ID",
       "Employee Name",
-      "Branch",
     ];
 
     const rows: (string | number)[][] = [];
@@ -291,13 +350,12 @@ export function EmployeeSalesModule() {
           s.paymentMethod,
           s.employeeId,
           s.employeeName,
-          s.branchName,
         ]);
       });
     });
 
     salesManagementService.exportToCSV(
-      `Sales_Report_${employeeId}_${reportDateFilter}`,
+      `PRO_BD_Shop_Report_${employeeId}_${reportDateFilter}`,
       headers,
       rows
     );
@@ -318,17 +376,16 @@ export function EmployeeSalesModule() {
       <div style="margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background-color: #f8fafc;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
           <div><strong>Employee:</strong> ${employeeName} (${employeeId})</div>
-          <div><strong>Branch:</strong> ${currentBranch.name}</div>
           <div><strong>Period:</strong> ${dateRangeLabel}</div>
         </div>
         <div style="display: flex; gap: 24px; margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 8px;">
           <div><strong>Total Transactions:</strong> ${reportTotals.totalTransactions}</div>
           <div><strong>Total Products Sold:</strong> ${reportTotals.totalProductsSold}</div>
-          <div><strong>Grand Total Sales:</strong> ₹${reportTotals.grandTotalSales.toFixed(2)}</div>
+          <div><strong>Grand Total Revenue:</strong> ₹${reportTotals.grandTotalSales.toFixed(2)}</div>
         </div>
       </div>
 
-      <h3 style="margin-top: 24px; font-size: 14px;">Product-wise Sales Summary</h3>
+      <h3 style="margin-top: 24px; font-size: 14px;">Product-wise Breakdown</h3>
       <table>
         <thead>
           <tr>
@@ -357,7 +414,7 @@ export function EmployeeSalesModule() {
         </tbody>
       </table>
 
-      <h3 style="margin-top: 30px; font-size: 14px;">Detailed Sales Transactions</h3>
+      <h3 style="margin-top: 30px; font-size: 14px;">Detailed Transactions</h3>
       <table>
         <thead>
           <tr>
@@ -389,14 +446,32 @@ export function EmployeeSalesModule() {
     `;
 
     salesManagementService.exportToPDF(
-      "Employee Sales & Invoicing Report",
-      `Employee: ${employeeName} • Branch: ${currentBranch.name}`,
+      "Employee PRO BD Shop Report",
+      `Employee: ${employeeName}`,
       htmlContent
     );
   };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              PRO BD Shop Management &amp; Invoicing
+            </h1>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <ShoppingBag className="w-3.5 h-3.5" />
+              <span>PRO BD Shop</span>
+            </span>
+          </div>
+          <p className="text-sm text-slate-500 mt-1">
+            Record shop counter billing, track personal transaction history, and generate export statements.
+          </p>
+        </div>
+      </div>
+
       {successMessage && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
@@ -435,10 +510,6 @@ export function EmployeeSalesModule() {
               <span>Customer &amp; Payment Details</span>
             </h3>
             <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-              <span className="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
-                <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                <span>{currentBranch.name}</span>
-              </span>
               <span className="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
                 <User className="w-3.5 h-3.5 text-indigo-600" />
                 <span>{employeeName} ({employeeId})</span>
@@ -526,7 +597,6 @@ export function EmployeeSalesModule() {
                 Automatic Capture:
               </span>
               <span>Operator: <b>{employeeName} ({employeeId})</b></span>
-              <span>Branch: <b>{currentBranch.name}</b></span>
               <span>Date &amp; Time: <b>{currentDate}</b></span>
               <span className="text-emerald-700 font-bold ml-auto flex items-center gap-1">
                 <Check className="w-3.5 h-3.5" /> Immediate Full Payment
@@ -556,7 +626,7 @@ export function EmployeeSalesModule() {
                 const lineTotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
                 return (
                   <div
-                    key={idx}
+                    key={item.id}
                     className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 transition-colors"
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -577,7 +647,7 @@ export function EmployeeSalesModule() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-                      {/* Product Dropdown (from exact 28 list) */}
+                      {/* Product Dropdown (from inventory) */}
                       <div className="sm:col-span-4">
                         <label className="block text-[11px] font-bold text-slate-600 mb-1">
                           Product *
@@ -589,12 +659,38 @@ export function EmployeeSalesModule() {
                           }
                           className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                         >
-                          {SALES_PRODUCT_LIST.map((prod) => (
-                            <option key={prod} value={prod}>
-                              {prod}
+                          {availableProducts.map((prod) => (
+                            <option key={prod.name} value={prod.name}>
+                              {prod.name} (Stock: {prod.currentStock}) - ₹{prod.price}
                             </option>
                           ))}
                         </select>
+                        {(() => {
+                          const stockItem = availableProducts.find((p) => p.name === item.product);
+                          const stock = stockItem ? stockItem.currentStock : 0;
+                          const isOverdraft = Number(item.quantity) > stock;
+                          return (
+                            <div className="flex items-center justify-between text-[10px] mt-1 px-0.5">
+                              <span
+                                className={cn(
+                                  "font-semibold",
+                                  stock > 5
+                                    ? "text-emerald-700"
+                                    : stock > 0
+                                    ? "text-amber-700"
+                                    : "text-rose-600"
+                                )}
+                              >
+                                Stock: {stock} units {stock <= 0 && "(Out of Stock)"}
+                              </span>
+                              {isOverdraft && (
+                                <span className="text-rose-600 font-bold">
+                                  Exceeds stock!
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Brand / Model */}
@@ -720,16 +816,7 @@ export function EmployeeSalesModule() {
             </div>
 
             {/* Bottom Actions & Grand Total */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={handleAddItem}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer self-start"
-              >
-                <Plus className="w-4 h-4" />
-                <span>+ Add Another Product</span>
-              </button>
-
+            <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4 pt-4 border-t border-slate-200">
               <div className="flex items-center gap-6 self-end sm:self-auto">
                 <div className="text-right">
                   <span className="text-xs text-slate-500 font-semibold block">
@@ -745,19 +832,19 @@ export function EmployeeSalesModule() {
                   className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-sm hover:shadow-md transition-all cursor-pointer flex items-center gap-2"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Save Sale (₹{grandTotal.toFixed(2)})</span>
+                  <span>Complete Purchase (₹{grandTotal.toFixed(2)})</span>
                 </button>
               </div>
             </div>
           </div>
         </form>
 
-        {/* 3. MY SALES HISTORY */}
+        {/* 3. MY TRANSACTION HISTORY */}
         <div className="space-y-4 pt-2">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <Receipt className="w-4 h-4 text-indigo-600" />
-              <span>3. My Sales History ({mySalesHistory.length})</span>
+              <span>3. My Transaction History ({mySalesHistory.length})</span>
             </h3>
             <span className="text-xs text-slate-400 font-medium">
               Transactions recorded by you
@@ -766,16 +853,11 @@ export function EmployeeSalesModule() {
 
           {/* Filter Bar */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                placeholder="Search by customer name, phone, or product sold..."
-                value={historySearch}
-                onChange={(e) => setHistorySearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium text-slate-900"
-              />
-            </div>
+            <UniversalSearch
+              value={historySearch}
+              onChange={setHistorySearch}
+              placeholder="Search by customer name, phone, or product..."
+            />
 
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-500">Date:</span>
@@ -820,7 +902,7 @@ export function EmployeeSalesModule() {
           <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
+                <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
                   <tr>
                     <th className="py-3 px-4">Date &amp; Time</th>
                     <th className="py-3 px-4">Invoice #</th>
@@ -837,10 +919,10 @@ export function EmployeeSalesModule() {
                       <td colSpan={7} className="py-12 text-center text-slate-400">
                         <Receipt className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                         <p className="text-xs font-bold text-slate-600">
-                          No sales recorded matching your filters.
+                          No transactions recorded matching your filters.
                         </p>
                         <p className="text-[11px] text-slate-400 mt-1">
-                          Record your first sale in the &quot;Record New Sale&quot; tab!
+                          Record customer purchases using the shop register above!
                         </p>
                       </td>
                     </tr>
@@ -863,7 +945,7 @@ export function EmployeeSalesModule() {
                         <td className="py-3 px-4 max-w-[280px]">
                           <div className="space-y-0.5">
                             {s.items.map((i, idx) => (
-                              <div key={idx} className="text-[11px] text-slate-700">
+                              <div key={i.id || `item-${idx}`} className="text-[11px] text-slate-700">
                                 <span className="font-bold">{i.quantity}x</span> {i.product}{" "}
                                 {i.brandModel ? `(${i.brandModel})` : ""}{" "}
                                 <span className="text-slate-400 font-mono">
@@ -888,16 +970,16 @@ export function EmployeeSalesModule() {
           </div>
         </div>
 
-        {/* 4. SALES REPORTS & EXPORT */}
+        {/* 4. PRO BD SHOP REPORTS & EXPORT */}
         <div className="space-y-6 pt-2">
           {/* Controls & Export Buttons */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Sales Reports for {employeeName}
+                PRO BD Shop Reports for {employeeName}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Generate and export detailed sales statements and product breakdowns.
+                Generate and export detailed shop statements and product breakdowns.
               </p>
             </div>
 
@@ -971,7 +1053,7 @@ export function EmployeeSalesModule() {
             </div>
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
               <span className="text-[11px] font-bold text-slate-500 uppercase">
-                Grand Total Sales Amount
+                Grand Total Shop Revenue
               </span>
               <p className="text-xl font-black text-emerald-700 mt-1">
                 ₹{reportTotals.grandTotalSales.toFixed(2)}
@@ -979,14 +1061,14 @@ export function EmployeeSalesModule() {
             </div>
           </div>
 
-          {/* Product-wise Sales Breakdown */}
+          {/* Product-wise Breakdown */}
           <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
             <div className="p-4 border-b border-slate-100 bg-slate-50/60 font-bold text-xs text-slate-800 uppercase tracking-wider">
-              Product-wise Sales Breakdown
+              Product-wise Breakdown
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
+                <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
                   <tr>
                     <th className="py-2.5 px-4">Product Name</th>
                     <th className="py-2.5 px-4 text-center">Quantity Sold</th>
@@ -997,12 +1079,12 @@ export function EmployeeSalesModule() {
                   {reportTotals.productBreakdown.length === 0 ? (
                     <tr>
                       <td colSpan={3} className="py-6 text-center text-slate-400">
-                        No sales found for the selected period.
+                        No transactions found for the selected period.
                       </td>
                     </tr>
                   ) : (
-                    reportTotals.productBreakdown.map((p, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/50">
+                    reportTotals.productBreakdown.map((p) => (
+                      <tr key={p.product} className="hover:bg-slate-50/50">
                         <td className="py-2.5 px-4 font-bold text-slate-900">
                           {p.product}
                         </td>

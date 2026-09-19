@@ -1,33 +1,28 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Plus, Users, CreditCard, DollarSign, Eye, Edit2 } from "lucide-react";
 import { MembershipRecord, MEMBERSHIP_PLANS } from "@/types/membership";
 import { PaymentMethod } from "@/types/payment";
 import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { membershipService } from "@/services/excel";
-import { SearchBar } from "@/components/kids-coaching/search-bar";
+import { UniversalSearch } from "@/components/ui/universal-search";
+import { universalMatch } from "@/lib/search";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
 import { PaymentBadge } from "@/components/kids-coaching/payment-badge";
 import { MembershipDetailsDrawer } from "@/components/membership/membership-details-drawer";
 import { MembershipFormModal } from "@/components/membership/membership-form-modal";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ExportDropdown } from "@/components/admin/common/export-dropdown";
 import { ExportColumn } from "@/utils/export-engine";
 
-interface AdminMembershipProps {
-  selectedBranch: string; // "all" | "branch-nlg" | "branch-mnk"
-}
-
 const EXPORT_COLUMNS: ExportColumn<MembershipRecord>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (r) => `#${r.serialNumber ?? ""}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
   { header: "Primary Member", key: "primaryMemberName" },
   { header: "Mobile", key: "primaryMobileNumber" },
   { header: "Email", key: "email" },
-  { header: "Branch", key: "branchName", formatter: (r) => r.branchName || "Nallagandla" },
   { header: "Plan", key: "membershipPlan" },
   {
     header: "Additional Members",
@@ -44,10 +39,16 @@ const EXPORT_COLUMNS: ExportColumn<MembershipRecord>[] = [
   { header: "Expiry Date", key: "expiryDate" },
 ];
 
-export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
+export function AdminMembership() {
   const [records, setRecords] = useState<MembershipRecord[]>(() =>
     membershipService.getSnapshot()
   );
+
+  useEffect(() => {
+    const handleUpdate = () => setRecords(membershipService.getSnapshot());
+    window.addEventListener("excel-data-updated", handleUpdate);
+    return () => window.removeEventListener("excel-data-updated", handleUpdate);
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -61,13 +62,8 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
 
   const filteredRecords = useMemo(() => {
     return records.filter((r) => {
-      if (selectedBranch !== "all" && r.branchId && r.branchId !== selectedBranch) {
+      if (searchQuery.trim() && !universalMatch(r, searchQuery)) {
         return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.trim().replace(/\D/g, "");
-        const cleanPhone = r.primaryMobileNumber.replace(/\D/g, "");
-        if (!cleanPhone.includes(q)) return false;
       }
       if (selectedMonth !== "All" && r.currentMonth !== selectedMonth) {
         return false;
@@ -80,7 +76,7 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
       }
       return true;
     });
-  }, [records, selectedBranch, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
+  }, [records, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
   const selectedRecords = useMemo(() => {
     return records.filter((r) => selectedIds.includes(r.id));
@@ -118,15 +114,10 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
   }, [filteredRecords]);
 
   const handleSave = async (recordData: Partial<MembershipRecord>, idToEdit?: string) => {
-    const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
-    const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
-
     if (idToEdit) {
       await membershipService.update(idToEdit, recordData, "ADM001");
     } else {
       await membershipService.create(recordData as any, {
-        branchId: targetBranchId,
-        branchName: targetBranchName,
         employeeId: "ADM001",
         employeeName: "Super Admin",
       });
@@ -159,7 +150,7 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
           <ExportDropdown
             moduleName="Membership"
             moduleTitle="Club Membership Registry"
-            subtitle={`Branch: ${selectedBranch === "all" ? "All Branches" : selectedBranch}`}
+            subtitle="Facility Registry"
             columns={EXPORT_COLUMNS}
             currentViewData={filteredRecords}
             selectedData={selectedRecords}
@@ -170,7 +161,7 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
               setRecordToEdit(null);
               setIsFormOpen(true);
             }}
-            className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer"
+            className="h-10 px-4 rounded-xl gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Membership</span>
@@ -178,63 +169,87 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
         </div>
       </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-              <CreditCard className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Active Plans</p>
-              <h3 className="text-xl font-bold text-slate-900">{metrics.total}</h3>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Active Plans */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Active Plans
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
+              {metrics.total}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Registered memberships
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+            <CreditCard className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Total Beneficiaries</p>
-              <h3 className="text-xl font-bold text-emerald-600">{metrics.familyMembers}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Total Beneficiaries */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Total Beneficiaries
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block">
+              {metrics.familyMembers}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Primary &amp; family members
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-              <CreditCard className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Active Status</p>
-              <h3 className="text-xl font-bold text-purple-600">{metrics.active}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Active Status */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Active Status
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-purple-600 mt-1 block">
+              {metrics.active}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              In-validity memberships
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+            <CreditCard className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-              <DollarSign className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Pending Dues</p>
-              <h3 className="text-xl font-bold text-rose-600">₹{metrics.totalDue}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Pending Dues */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Pending Dues
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-rose-600 mt-1 block">
+              ₹{metrics.totalDue}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Outstanding subscription fees
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+            <DollarSign className="w-6 h-6" />
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <SearchBar
+        <UniversalSearch
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by primary mobile number..."
+          placeholder="Search by name, ID, phone, or email..."
         />
         <div className="flex items-center gap-2.5 flex-wrap">
           <PaymentMethodFilter
@@ -274,7 +289,6 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
                   <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Primary Member</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mobile</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Branch</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Plan Details</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Additional Members</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Fee</th>
@@ -288,7 +302,7 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/80">
-                {filteredRecords.map((r) => {
+                {filteredRecords.map((r, index) => {
                   const isChecked = selectedIds.includes(r.id);
                   return (
                     <tr
@@ -306,18 +320,13 @@ export function AdminMembership({ selectedBranch }: AdminMembershipProps) {
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        #{r.serialNumber}
+                        #{index + 1}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {r.primaryMemberName}
                       </td>
                       <td className="px-3.5 py-3 font-mono text-slate-600 whitespace-nowrap">
                         {r.primaryMobileNumber}
-                      </td>
-                      <td className="px-3.5 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                          {r.branchName || "Nallagandla"}
-                        </span>
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap max-w-[170px] truncate" title={r.membershipPlan}>
                         {r.membershipPlan}

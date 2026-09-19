@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useBranch } from "@/context/branch-context";
+import { useAuth } from "@/context/auth-context";
 
 interface LoginFormProps {
   role: "employee" | "admin";
@@ -36,7 +36,7 @@ export function LoginForm({
   targetRoute,
 }: LoginFormProps) {
   const router = useRouter();
-  const { loginEmployee } = useBranch();
+  const { loginEmployee } = useAuth();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -60,28 +60,16 @@ export function LoginForm({
     }
 
     if (!isEmployee) {
-      // Admin login validation
-      const newErrors: { id?: string; password?: string } = {};
-      if (!identifier.trim()) {
-        newErrors.id = `Please enter your ${idLabel.toLowerCase()}.`;
-      }
-      if (!password) {
-        newErrors.password = "Please enter your password.";
-      }
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        return;
-      }
+      // Direct access to Admin Portal without authentication block
+      router.push(targetRoute);
+      return;
     }
 
-    // Clear any previous error and begin simulated login
+    // Clear any previous error and begin employee login
     setErrors({});
     setIsLoading(true);
 
-    if (isEmployee) {
-      // Internal branch resolution: NLGxxx -> Nallagandla, MNKxxx -> Manikonda, empty/invalid -> default
-      loginEmployee(identifier);
-    }
+    loginEmployee(identifier);
 
     // Simulated delay for smooth transition
     setTimeout(() => {

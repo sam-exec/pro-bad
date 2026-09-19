@@ -8,7 +8,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Logo } from "@/components/common/logo";
-import { useBranch } from "@/context/branch-context";
 import { SidebarItem } from "./sidebar-item";
 import { DASHBOARD_NAV_ITEMS } from "./types";
 import { cn } from "@/lib/utils";
@@ -30,7 +29,6 @@ export function Sidebar({
   isMobileOpen,
   onCloseMobile,
 }: SidebarProps) {
-  const { currentBranch } = useBranch();
   return (
     <>
       {/* Mobile Backdrop */}
@@ -64,15 +62,10 @@ export function Sidebar({
             {(!isCollapsed || isMobileOpen) && (
               <div className="flex flex-col truncate">
                 <span className="font-bold text-slate-900 text-sm tracking-tight truncate">
-                  Employee Portal
+                  PRO Badminton
                 </span>
-                <span
-                  className={cn(
-                    "text-[11px] font-semibold tracking-wide truncate",
-                    currentBranch.code === "MNK" ? "text-purple-600" : "text-blue-600"
-                  )}
-                >
-                  {currentBranch.name} Branch
+                <span className="text-[11px] font-semibold text-blue-600 tracking-wide truncate">
+                  Staff Operations
                 </span>
               </div>
             )}

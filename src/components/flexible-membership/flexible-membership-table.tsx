@@ -70,7 +70,7 @@ export function FlexibleMembershipTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white text-xs text-slate-700">
-              {memberships.map((m) => {
+              {memberships.map((m, index) => {
                 const totalMembers = 1 + (m.additionalMembers?.length || 0);
                 const hasAdditional = (m.additionalMembers?.length || 0) > 0;
 
@@ -78,7 +78,7 @@ export function FlexibleMembershipTable({
                   <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
                     {/* Serial Number */}
                     <td className="px-3.5 py-3 font-mono font-medium text-slate-900 whitespace-nowrap">
-                      #{m.serialNumber}
+                      #{index + 1}
                     </td>
 
                     {/* Primary Name */}
@@ -196,7 +196,7 @@ export function FlexibleMembershipTable({
 
       {/* Mobile Cards */}
       <div className="md:hidden space-y-3.5">
-        {memberships.map((m) => {
+        {memberships.map((m, index) => {
           const totalMembers = 1 + (m.additionalMembers?.length || 0);
 
           return (
@@ -216,7 +216,7 @@ export function FlexibleMembershipTable({
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 font-mono mt-0.5">
-                      #{m.serialNumber}
+                      #{index + 1}
                     </p>
                   </div>
                   <FlexibleStatusBadge status={m.status} />

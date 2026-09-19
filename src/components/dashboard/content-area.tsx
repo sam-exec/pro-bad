@@ -9,6 +9,8 @@ import { MembershipModule } from "@/components/membership/membership-module";
 import { FlexibleMembershipModule } from "@/components/flexible-membership/flexible-membership-module";
 import { SuperMomsModule } from "@/components/super-moms/super-moms-module";
 import { EmployeeSalesModule } from "@/components/sales/employee-sales-module";
+import { EmployeeInventoryModule } from "@/components/inventory/employee-inventory-module";
+import { EmployeePurchaseHistoryModule } from "@/components/purchase-history/employee-purchase-history-module";
 
 interface ContentAreaProps {
   currentModule: string;
@@ -18,10 +20,14 @@ export function ContentArea({ currentModule }: ContentAreaProps) {
   const activeItem = DASHBOARD_NAV_ITEMS.find((item) => item.id === currentModule);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {currentModule === "sales" ? (
+    <main className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 lg:p-8 bg-slate-50/50">
+      <div className="max-w-7xl mx-auto w-full">
+        {currentModule === "pro-bd-shop" || currentModule === "sales" ? (
           <EmployeeSalesModule />
+        ) : currentModule === "inventory" ? (
+          <EmployeeInventoryModule />
+        ) : currentModule === "purchase-history" ? (
+          <EmployeePurchaseHistoryModule />
         ) : currentModule === "kids-coaching" ? (
           <KidsCoachingModule />
         ) : currentModule === "kids-coaching-1-1" ? (
@@ -40,6 +46,6 @@ export function ContentArea({ currentModule }: ContentAreaProps) {
           activeItem && <ModulePlaceholder item={activeItem} />
         )}
       </div>
-    </div>
+    </main>
   );
 }

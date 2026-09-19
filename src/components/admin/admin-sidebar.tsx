@@ -3,7 +3,9 @@
 import React from "react";
 import {
   Users,
-  CircleDollarSign,
+  ShoppingBag,
+  Package,
+  Receipt,
   GraduationCap,
   UserCheck,
   Trophy,
@@ -11,10 +13,8 @@ import {
   CreditCard,
   Timer,
   Heart,
-  Building2,
   BarChart3,
   History,
-  Settings,
   PanelLeftClose,
   PanelLeft,
   X,
@@ -31,9 +31,19 @@ export const ADMIN_NAV_ITEMS: AdminNavigationItem[] = [
     icon: Users,
   },
   {
-    id: "sales",
-    label: "Sales",
-    icon: CircleDollarSign,
+    id: "pro-bd-shop",
+    label: "PRO BD Shop",
+    icon: ShoppingBag,
+  },
+  {
+    id: "inventory",
+    label: "Inventory",
+    icon: Package,
+  },
+  {
+    id: "purchase-history",
+    label: "Purchase History",
+    icon: Receipt,
   },
   {
     id: "kids-coaching",
@@ -71,11 +81,6 @@ export const ADMIN_NAV_ITEMS: AdminNavigationItem[] = [
     icon: Heart,
   },
   {
-    id: "branches",
-    label: "Branches",
-    icon: Building2,
-  },
-  {
     id: "reports",
     label: "Reports",
     icon: BarChart3,
@@ -84,11 +89,6 @@ export const ADMIN_NAV_ITEMS: AdminNavigationItem[] = [
     id: "audit-logs",
     label: "Audit Logs",
     icon: History,
-  },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: Settings,
   },
 ];
 
@@ -176,7 +176,9 @@ export function AdminSidebar({
 
           {ADMIN_NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const isActive = currentModule === item.id;
+            const isActive =
+              currentModule === item.id ||
+              (item.id === "pro-bd-shop" && currentModule === "sales");
             return (
               <button
                 key={item.id}

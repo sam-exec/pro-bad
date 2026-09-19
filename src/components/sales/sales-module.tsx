@@ -13,7 +13,6 @@ import { InventoryTable } from "./admin/inventory-table";
 import { ProductCatalogManager } from "./admin/product-catalog-manager";
 import { VariantConfigModal } from "./admin/variant-config-modal";
 import { InvoiceModal } from "./invoice-modal";
-import { BRANCHES } from "@/config/branches";
 import {
   ShoppingCart,
   Layers,
@@ -30,12 +29,10 @@ import {
 import { cn } from "@/lib/utils";
 
 interface SalesModuleProps {
-  branchId?: string;
   isAdmin?: boolean;
 }
 
 export function SalesModule({
-  branchId = "branch-nlg",
   isAdmin = false,
 }: SalesModuleProps) {
   const [activeTab, setActiveTab] = useState<
@@ -46,10 +43,6 @@ export function SalesModule({
   const [modalInitialProdId, setModalInitialProdId] = useState<string | undefined>();
   const [activeInvoice, setActiveInvoice] = useState<InvoiceDetails | null>(null);
   const [, setRenderTrigger] = useState(0);
-
-  // Selected Branch information
-  const currentBranch =
-    BRANCHES.find((b) => b.id === branchId) || BRANCHES[0];
 
   // Subscribe to service updates
   useEffect(() => {
@@ -109,9 +102,7 @@ export function SalesModule({
     setIsAddModalOpen(true);
   };
 
-  const invoices = productService.getInvoices(
-    branchId === "all" ? undefined : branchId
-  );
+  const invoices = productService.getInvoices();
 
   return (
     <div className="space-y-6">
@@ -124,7 +115,7 @@ export function SalesModule({
             </h1>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
               <CircleDollarSign className="w-3.5 h-3.5" />
-              <span>{currentBranch.name}</span>
+              <span>PRO BD Shop</span>
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
@@ -203,7 +194,6 @@ export function SalesModule({
           {/* Left 7.5 Columns: Category & Product Selection Flow */}
           <div className="lg:col-span-8">
             <ProductSelectionFlow
-              selectedBranch={branchId}
               onAddToCart={handleAddToCart}
             />
           </div>
@@ -212,8 +202,6 @@ export function SalesModule({
           <div className="lg:col-span-4 sticky top-4">
             <POSCart
               cart={cart}
-              branchId={currentBranch.id}
-              branchName={currentBranch.name}
               employeeId="NLG004"
               employeeName="Rahul Sharma"
               onUpdateQuantity={handleUpdateQuantity}
@@ -233,7 +221,6 @@ export function SalesModule({
       {/* TAB 3: STOCK & INVENTORY MATRIX */}
       {activeTab === "inventory" && (
         <InventoryTable
-          selectedBranch={branchId}
           onOpenAddModal={() => handleOpenAddModal()}
         />
       )}
@@ -258,7 +245,7 @@ export function SalesModule({
           <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
+                <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
                   <tr>
                     <th className="py-3 px-4">Invoice #</th>
                     <th className="py-3 px-4">Customer</th>

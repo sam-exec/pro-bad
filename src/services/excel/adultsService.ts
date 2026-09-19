@@ -1,18 +1,16 @@
 /**
  * Adults Coaching Module Service
  * 
- * Future Excel Mapping:
+ * Master Excel Mapping:
  * Adults Coaching Module     -> Adults Coaching.xlsx -> Adults Coaching Worksheet
  * Adults Coaching 1-1 Module -> Adults Coaching.xlsx -> Adults Coaching 1-1 Worksheet
  * 
- * Data Flow:
- * Employee UI -> adultsService -> excelService -> Adults Coaching.xlsx [Both Worksheets]
+ * Single Location Architecture
  */
 
 import { excelService } from "./excelService";
-import { EXCEL_WORKSHEETS } from "@/types/excel";
+import { EXCEL_WORKSHEETS, EmployeeAuditMeta } from "@/types/excel";
 import { AdultCoachMember, Adult1on1Member } from "@/types/coaching-modules";
-import { BranchRecordMeta } from "@/types/branch";
 
 export class AdultsService {
   // Master Workbook: Adults Coaching.xlsx
@@ -28,26 +26,18 @@ export class AdultsService {
   // 1. Adults Coaching (Group) - Worksheet 1
   // ==========================================================================
 
-  getSnapshot(branchId?: string): AdultCoachMember[] {
-    const records = excelService.getWorksheetSnapshot<AdultCoachMember>(
+  getSnapshot(): AdultCoachMember[] {
+    return excelService.getWorksheetSnapshot<AdultCoachMember>(
       this.groupWorkbook,
       this.groupWorksheet
     );
-    if (branchId) {
-      return records.filter((r) => r.branchId === branchId);
-    }
-    return records;
   }
 
-  async getAll(branchId?: string): Promise<AdultCoachMember[]> {
-    const all = await excelService.readWorksheet<AdultCoachMember>(
+  async getAll(): Promise<AdultCoachMember[]> {
+    return excelService.readWorksheet<AdultCoachMember>(
       this.groupWorkbook,
       this.groupWorksheet
     );
-    if (branchId) {
-      return all.filter((r) => r.branchId === branchId);
-    }
-    return all;
   }
 
   async getById(id: string): Promise<AdultCoachMember | null> {
@@ -58,14 +48,13 @@ export class AdultsService {
     );
   }
 
-  async search(query: string, branchId?: string): Promise<AdultCoachMember[]> {
+  async search(query: string): Promise<AdultCoachMember[]> {
     const cleanPhone = query.trim().replace(/\D/g, "");
     const cleanText = query.trim().toLowerCase();
     return excelService.queryWorksheet<AdultCoachMember>(
       this.groupWorkbook,
       this.groupWorksheet,
       (item) => {
-        if (branchId && item.branchId !== branchId) return false;
         if (!cleanText) return true;
         const phone = item.mobileNumber.replace(/\D/g, "");
         return phone.includes(cleanPhone) || item.memberName.toLowerCase().includes(cleanText);
@@ -80,8 +69,6 @@ export class AdultsService {
       | "recordId"
       | "serialNumber"
       | "memberId"
-      | "branchId"
-      | "branchName"
       | "employeeId"
       | "employeeName"
       | "createdAt"
@@ -89,7 +76,7 @@ export class AdultsService {
       | "lastModifiedBy"
       | "createdBy"
     >,
-    auditMeta: BranchRecordMeta
+    auditMeta: EmployeeAuditMeta
   ): Promise<AdultCoachMember> {
     const timestamp = new Date().toISOString();
     const existing = await this.getAll();
@@ -99,7 +86,7 @@ export class AdultsService {
     );
     const serialNumber = maxSerial + 1;
     const formattedId = `AC-2026-${String(serialNumber).padStart(3, "0")}`;
-    const id = `ac-${Date.now()}`;
+    const id = `ac-${crypto.randomUUID()}`;
 
     const newRecord: AdultCoachMember = {
       ...data,
@@ -107,8 +94,6 @@ export class AdultsService {
       recordId: id,
       serialNumber,
       memberId: formattedId,
-      branchId: auditMeta.branchId,
-      branchName: auditMeta.branchName,
       employeeId: auditMeta.employeeId,
       employeeName: auditMeta.employeeName,
       createdBy: auditMeta.employeeId,
@@ -150,26 +135,18 @@ export class AdultsService {
   // 2. Adults Coaching 1-1 - Worksheet 2
   // ==========================================================================
 
-  getSnapshot1on1(branchId?: string): Adult1on1Member[] {
-    const records = excelService.getWorksheetSnapshot<Adult1on1Member>(
+  getSnapshot1on1(): Adult1on1Member[] {
+    return excelService.getWorksheetSnapshot<Adult1on1Member>(
       this.oneOnOneWorkbook,
       this.oneOnOneWorksheet
     );
-    if (branchId) {
-      return records.filter((r) => r.branchId === branchId);
-    }
-    return records;
   }
 
-  async getAll1on1(branchId?: string): Promise<Adult1on1Member[]> {
-    const all = await excelService.readWorksheet<Adult1on1Member>(
+  async getAll1on1(): Promise<Adult1on1Member[]> {
+    return excelService.readWorksheet<Adult1on1Member>(
       this.oneOnOneWorkbook,
       this.oneOnOneWorksheet
     );
-    if (branchId) {
-      return all.filter((r) => r.branchId === branchId);
-    }
-    return all;
   }
 
   async getById1on1(id: string): Promise<Adult1on1Member | null> {
@@ -180,14 +157,13 @@ export class AdultsService {
     );
   }
 
-  async search1on1(query: string, branchId?: string): Promise<Adult1on1Member[]> {
+  async search1on1(query: string): Promise<Adult1on1Member[]> {
     const cleanPhone = query.trim().replace(/\D/g, "");
     const cleanText = query.trim().toLowerCase();
     return excelService.queryWorksheet<Adult1on1Member>(
       this.oneOnOneWorkbook,
       this.oneOnOneWorksheet,
       (item) => {
-        if (branchId && item.branchId !== branchId) return false;
         if (!cleanText) return true;
         const phone = item.mobileNumber.replace(/\D/g, "");
         return phone.includes(cleanPhone) || item.memberName.toLowerCase().includes(cleanText);
@@ -202,8 +178,6 @@ export class AdultsService {
       | "recordId"
       | "serialNumber"
       | "memberId"
-      | "branchId"
-      | "branchName"
       | "employeeId"
       | "employeeName"
       | "createdAt"
@@ -211,7 +185,7 @@ export class AdultsService {
       | "lastModifiedBy"
       | "createdBy"
     >,
-    auditMeta: BranchRecordMeta
+    auditMeta: EmployeeAuditMeta
   ): Promise<Adult1on1Member> {
     const timestamp = new Date().toISOString();
     const existing = await this.getAll1on1();
@@ -221,7 +195,7 @@ export class AdultsService {
     );
     const serialNumber = maxSerial + 1;
     const formattedId = `AC1-2026-${String(serialNumber).padStart(3, "0")}`;
-    const id = `ac1-${Date.now()}`;
+    const id = `ac1-${crypto.randomUUID()}`;
 
     const newRecord: Adult1on1Member = {
       ...data,
@@ -229,8 +203,6 @@ export class AdultsService {
       recordId: id,
       serialNumber,
       memberId: formattedId,
-      branchId: auditMeta.branchId,
-      branchName: auditMeta.branchName,
       employeeId: auditMeta.employeeId,
       employeeName: auditMeta.employeeName,
       createdBy: auditMeta.employeeId,

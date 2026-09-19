@@ -30,7 +30,6 @@ import {
 import { cn } from "@/lib/utils";
 
 interface ProductSelectionFlowProps {
-  selectedBranch: string;
   onAddToCart: (item: CartItem) => void;
 }
 
@@ -45,7 +44,6 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
 };
 
 export function ProductSelectionFlow({
-  selectedBranch,
   onAddToCart,
 }: ProductSelectionFlowProps) {
   const categories = productService.getCategories();
@@ -82,14 +80,13 @@ export function ProductSelectionFlow({
     return found || models[0];
   }, [models, selectedModelId]);
 
-  // Variants for active model (filtered by branch if specified)
+  // Variants for active model
   const modelVariants = useMemo(() => {
     if (!activeModel) return [];
     return productService.getVariants({
       modelId: activeModel.id,
-      branchId: selectedBranch === "all" ? undefined : selectedBranch,
     });
-  }, [activeModel, selectedBranch]);
+  }, [activeModel]);
 
   // Extract all unique attribute keys and possible values for current model
   const attributeMatrix = useMemo(() => {

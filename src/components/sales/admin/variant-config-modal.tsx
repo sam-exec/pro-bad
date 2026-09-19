@@ -8,7 +8,6 @@ import {
   ProductVariant,
 } from "@/types/products";
 import { productService } from "@/services/productService";
-import { BRANCHES } from "@/config/branches";
 import {
   X,
   Plus,
@@ -55,7 +54,6 @@ export function VariantConfigModal({
   const [sellingPrice, setSellingPrice] = useState<number>(160);
   const [stockQuantity, setStockQuantity] = useState<number>(10);
   const [lowStockThreshold, setLowStockThreshold] = useState<number>(3);
-  const [branchId, setBranchId] = useState<string>("branch-nlg");
   const [attributeRows, setAttributeRows] = useState<
     { key: string; value: string }[]
   >([
@@ -179,7 +177,6 @@ export function VariantConfigModal({
         sellingPrice: Number(sellingPrice) || 0,
         stockQuantity: Number(stockQuantity) || 0,
         lowStockThreshold: Number(lowStockThreshold) || 2,
-        branchId,
       });
 
       setMessage({
@@ -347,41 +344,22 @@ export function VariantConfigModal({
                 </div>
               </div>
 
-              {/* Model & Branch */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Select Model / Brand *
-                  </label>
-                  <select
-                    value={selectedModelId}
-                    onChange={(e) => setSelectedModelId(e.target.value)}
-                    className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
-                  >
-                    {availableModels.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} ({m.brand || "ProBad"})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Branch Allocation *
-                  </label>
-                  <select
-                    value={branchId}
-                    onChange={(e) => setBranchId(e.target.value)}
-                    className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
-                  >
-                    {BRANCHES.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} ({b.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Model */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Select Model / Brand *
+                </label>
+                <select
+                  value={selectedModelId}
+                  onChange={(e) => setSelectedModelId(e.target.value)}
+                  className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  {availableModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.brand || "ProBad"})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Dynamic Attribute Key-Value Builder */}

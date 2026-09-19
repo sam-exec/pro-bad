@@ -39,8 +39,6 @@ export type StudentFormData = Omit<
   | "studentId"
   | "dueAmount"
   | "paymentStatus"
-  | "branchId"
-  | "branchName"
   | "employeeId"
   | "employeeName"
   | "createdBy"

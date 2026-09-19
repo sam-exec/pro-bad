@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Plus, Users, Timer, Clock, Eye, Edit2 } from "lucide-react";
 import { FlexibleMembershipRecord } from "@/types/flexible-membership";
 import { membershipService } from "@/services/excel";
-import { SearchBar } from "@/components/kids-coaching/search-bar";
+import { UniversalSearch } from "@/components/ui/universal-search";
+import { universalMatch } from "@/lib/search";
 import { FlexibleStatusBadge } from "@/components/flexible-membership/flexible-status-badge";
 import { HoursProgressBar } from "@/components/flexible-membership/hours-progress-bar";
 import { FlexibleMembershipDrawer } from "@/components/flexible-membership/flexible-membership-drawer";
@@ -12,20 +13,14 @@ import { FlexibleMembershipModal } from "@/components/flexible-membership/flexib
 import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ExportDropdown } from "@/components/admin/common/export-dropdown";
 import { ExportColumn } from "@/utils/export-engine";
 
-interface AdminFlexibleMembershipProps {
-  selectedBranch: string; // "all" | "branch-nlg" | "branch-mnk"
-}
-
 const EXPORT_COLUMNS: ExportColumn<FlexibleMembershipRecord>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (r) => `#${r.serialNumber ?? ""}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
   { header: "Primary Member", key: "primaryMemberName" },
   { header: "Mobile Number", key: "primaryMobileNumber" },
   { header: "Email", key: "email" },
-  { header: "Branch", key: "branchName", formatter: (r) => r.branchName || "Nallagandla" },
   { header: "Total Hours", key: "totalHours", formatter: (r) => `${r.totalHours} hrs` },
   { header: "Hours Used", key: "hoursUsed", formatter: (r) => `${r.hoursUsed} hrs` },
   { header: "Hours Remaining", key: "hoursRemaining", formatter: (r) => `${r.hoursRemaining} hrs` },
@@ -36,10 +31,16 @@ const EXPORT_COLUMNS: ExportColumn<FlexibleMembershipRecord>[] = [
   { header: "Expiry Date", key: "expiryDate" },
 ];
 
-export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembershipProps) {
+export function AdminFlexibleMembership() {
   const [records, setRecords] = useState<FlexibleMembershipRecord[]>(() =>
     membershipService.getSnapshotFlexible()
   );
+
+  useEffect(() => {
+    const handleUpdate = () => setRecords(membershipService.getSnapshotFlexible());
+    window.addEventListener("excel-data-updated", handleUpdate);
+    return () => window.removeEventListener("excel-data-updated", handleUpdate);
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("All");
@@ -52,13 +53,8 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
 
   const filteredRecords = useMemo(() => {
     return records.filter((r) => {
-      if (selectedBranch !== "all" && r.branchId && r.branchId !== selectedBranch) {
+      if (searchQuery.trim() && !universalMatch(r, searchQuery)) {
         return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.trim().replace(/\D/g, "");
-        const cleanPhone = r.primaryMobileNumber.replace(/\D/g, "");
-        if (!cleanPhone.includes(q)) return false;
       }
       if (statusFilter !== "All" && r.status !== statusFilter) {
         return false;
@@ -68,7 +64,7 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
       }
       return true;
     });
-  }, [records, selectedBranch, searchQuery, statusFilter, paymentMethodFilter]);
+  }, [records, searchQuery, statusFilter, paymentMethodFilter]);
 
   const selectedRecords = useMemo(() => {
     return records.filter((r) => selectedIds.includes(r.id));
@@ -103,15 +99,10 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
   }, [filteredRecords]);
 
   const handleSave = async (recordData: Partial<FlexibleMembershipRecord>, idToEdit?: string) => {
-    const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
-    const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
-
     if (idToEdit) {
       await membershipService.updateFlexible(idToEdit, recordData, "ADM001");
     } else {
       await membershipService.createFlexible(recordData as any, {
-        branchId: targetBranchId,
-        branchName: targetBranchName,
         employeeId: "ADM001",
         employeeName: "Super Admin",
       });
@@ -144,7 +135,7 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
           <ExportDropdown
             moduleName="Flexible_Membership"
             moduleTitle="Flexible 30-Hour Membership Registry"
-            subtitle={`Branch: ${selectedBranch === "all" ? "All Branches" : selectedBranch}`}
+            subtitle="Facility Registry"
             columns={EXPORT_COLUMNS}
             currentViewData={filteredRecords}
             selectedData={selectedRecords}
@@ -155,7 +146,7 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
               setRecordToEdit(null);
               setIsFormOpen(true);
             }}
-            className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs cursor-pointer"
+            className="h-10 px-4 rounded-xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Flexible Pack</span>
@@ -163,63 +154,87 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
         </div>
       </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-              <Timer className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Total Passes</p>
-              <h3 className="text-xl font-bold text-slate-900">{metrics.total}</h3>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Passes */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Total Passes
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
+              {metrics.total}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              30-hour packages issued
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+            <Timer className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Active Passes</p>
-              <h3 className="text-xl font-bold text-emerald-600">{metrics.active}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Active Passes */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Active Passes
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block">
+              {metrics.active}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Usable court time
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Hours Played</p>
-              <h3 className="text-xl font-bold text-blue-600">{metrics.hoursUsed} hrs</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Hours Played */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Hours Played
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-blue-600 mt-1 block">
+              {metrics.hoursUsed} hrs
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Total logged slot time
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+            <Clock className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-              <Timer className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Balance Hours</p>
-              <h3 className="text-xl font-bold text-amber-600">{metrics.hoursRemaining} hrs</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Balance Hours */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Balance Hours
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-amber-600 mt-1 block">
+              {metrics.hoursRemaining} hrs
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Remaining member quota
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+            <Timer className="w-6 h-6" />
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <SearchBar
+        <UniversalSearch
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by primary mobile number..."
+          placeholder="Search by name, ID, phone, or email..."
         />
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="flex items-center gap-2">
@@ -268,7 +283,6 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
                   <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Primary Member</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mobile</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Branch</th>
                   <th className="px-3.5 py-3 whitespace-nowrap min-w-[160px]">Court Hours Balance</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Amount Paid</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
@@ -279,7 +293,7 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/80">
-                {filteredRecords.map((r) => {
+                {filteredRecords.map((r, index) => {
                   const isChecked = selectedIds.includes(r.id);
                   return (
                     <tr
@@ -297,18 +311,13 @@ export function AdminFlexibleMembership({ selectedBranch }: AdminFlexibleMembers
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        #{r.serialNumber}
+                        #{index + 1}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {r.primaryMemberName}
                       </td>
                       <td className="px-3.5 py-3 font-mono text-slate-600 whitespace-nowrap">
                         {r.primaryMobileNumber}
-                      </td>
-                      <td className="px-3.5 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                          {r.branchName || "Nallagandla"}
-                        </span>
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         <HoursProgressBar hoursUsed={r.hoursUsed} totalHours={r.totalHours} />

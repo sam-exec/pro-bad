@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Plus,
   Users,
@@ -20,29 +20,24 @@ import { COACHES, Gender, StudentStatus, PaymentStatus, PaymentMethod } from "@/
 import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { kidsService } from "@/services/excel";
-import { SearchBar } from "@/components/kids-coaching/search-bar";
+import { UniversalSearch } from "@/components/ui/universal-search";
+import { universalMatch } from "@/lib/search";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
 import { PaymentBadge } from "@/components/kids-coaching/payment-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { ExportDropdown } from "@/components/admin/common/export-dropdown";
 import { ExportColumn } from "@/utils/export-engine";
 
-interface AdminKidsCoaching1on1Props {
-  selectedBranch: string; // "all" | "branch-nlg" | "branch-mnk"
-}
-
 const EXPORT_COLUMNS: ExportColumn<Kids1on1Student>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (r) => `#${r.serialNumber ?? ""}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
   { header: "Student Name", key: "studentName" },
   { header: "Parent Name", key: "parentName" },
   { header: "Mobile", key: "parentMobile" },
   { header: "Age", key: "age" },
   { header: "Gender", key: "gender" },
-  { header: "Branch", key: "branchName", formatter: (r) => r.branchName || "Nallagandla" },
   { header: "Coach", key: "coach" },
   { header: "Timing", key: "preferredTiming" },
   { header: "Package", key: "sessionPackage" },
@@ -57,10 +52,16 @@ const EXPORT_COLUMNS: ExportColumn<Kids1on1Student>[] = [
   { header: "Joining Date", key: "joiningDate" },
 ];
 
-export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1Props) {
+export function AdminKidsCoaching1on1() {
   const [students, setStudents] = useState<Kids1on1Student[]>(() =>
     kidsService.getSnapshot1on1()
   );
+
+  useEffect(() => {
+    const handleUpdate = () => setStudents(kidsService.getSnapshot1on1());
+    window.addEventListener("excel-data-updated", handleUpdate);
+    return () => window.removeEventListener("excel-data-updated", handleUpdate);
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -94,13 +95,8 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
   // Filtered
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
-      if (selectedBranch !== "all" && s.branchId && s.branchId !== selectedBranch) {
+      if (searchQuery.trim() && !universalMatch(s, searchQuery)) {
         return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.trim().replace(/\D/g, "");
-        const cleanPhone = s.parentMobile.replace(/\D/g, "");
-        if (!cleanPhone.includes(q)) return false;
       }
       if (selectedMonth !== "All" && s.month !== selectedMonth) {
         return false;
@@ -113,7 +109,7 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
       }
       return true;
     });
-  }, [students, selectedBranch, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
+  }, [students, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
   const selectedStudents = useMemo(() => {
     return students.filter((s) => selectedIds.includes(s.id));
@@ -196,8 +192,6 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
-    const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
     const numFee = Number(formData.feeAmount) || 0;
     const numPaid = Number(formData.amountPaid) || 0;
     const dueAmount = Math.max(0, numFee - numPaid);
@@ -228,8 +222,6 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
           sessionsRemaining: formData.totalSessions,
         },
         {
-          branchId: targetBranchId,
-          branchName: targetBranchName,
           employeeId: "ADM001",
           employeeName: "Super Admin",
         }
@@ -263,7 +255,7 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
           <ExportDropdown
             moduleName="Kids_Coaching_1on1"
             moduleTitle="Kids Coaching 1-1 Registry"
-            subtitle={`Branch: ${selectedBranch === "all" ? "All Branches" : selectedBranch}`}
+            subtitle="Administrative Export"
             columns={EXPORT_COLUMNS}
             currentViewData={filteredStudents}
             selectedData={selectedStudents}
@@ -271,7 +263,7 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
           />
           <Button
             onClick={handleOpenAdd}
-            className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer"
+            className="h-10 px-4 rounded-xl gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add 1-1 Student</span>
@@ -279,63 +271,87 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">1-1 Enrolled</p>
-              <h3 className="text-xl font-bold text-slate-900">{metrics.total}</h3>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 1-1 Enrolled */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              1-1 Enrolled
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
+              {metrics.total}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Registered trainees
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-              <Award className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Active Squad</p>
-              <h3 className="text-xl font-bold text-emerald-600">{metrics.active}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Active Squad */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Active Squad
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block">
+              {metrics.active}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Ongoing training slots
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+            <Award className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Sessions Delivered</p>
-              <h3 className="text-xl font-bold text-indigo-600">{metrics.completedSessions}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Sessions Delivered */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Sessions Delivered
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-indigo-600 mt-1 block">
+              {metrics.completedSessions}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Completed court hours
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+            <Calendar className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-              <DollarSign className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Pending Dues</p>
-              <h3 className="text-xl font-bold text-rose-600">₹{metrics.totalDue}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Pending Dues */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Pending Dues
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-rose-600 mt-1 block">
+              ₹{metrics.totalDue}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Uncollected balances
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+            <DollarSign className="w-6 h-6" />
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <SearchBar
+        <UniversalSearch
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by parent mobile number..."
+          placeholder="Search by name, ID, phone, or email..."
         />
         <div className="flex items-center gap-2.5 flex-wrap">
           <PaymentMethodFilter
@@ -375,7 +391,6 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
                   <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Student Name</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Parent Details</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Branch</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Coach</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Preferred Slot</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Package</th>
@@ -390,7 +405,7 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/80">
-                {filteredStudents.map((s) => {
+                {filteredStudents.map((s, index) => {
                   const isChecked = selectedIds.includes(s.id);
                   return (
                     <tr
@@ -408,7 +423,7 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        #{s.serialNumber}
+                        #{index + 1}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {s.studentName} ({s.age}y, {s.gender})
@@ -416,11 +431,6 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         <div className="font-medium text-slate-800">{s.parentName}</div>
                         <div className="text-[11px] font-mono text-slate-500">{s.parentMobile}</div>
-                      </td>
-                      <td className="px-3.5 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                          {s.branchName || "Nallagandla"}
-                        </span>
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap font-medium text-slate-800">
                         {s.coach}
@@ -514,7 +524,6 @@ export function AdminKidsCoaching1on1({ selectedBranch }: AdminKidsCoaching1on1P
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
                 <div className="flex justify-between"><span className="text-slate-500">Parent:</span><span className="font-semibold text-slate-800">{viewingStudent.parentName}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Mobile:</span><span className="font-mono font-semibold text-slate-800">{viewingStudent.parentMobile}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Branch:</span><span className="font-semibold text-slate-800">{viewingStudent.branchName || "Nallagandla"}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Coach:</span><span className="font-semibold text-slate-800">{viewingStudent.coach}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Slot:</span><span className="font-semibold text-slate-800">{viewingStudent.preferredTiming}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Package:</span><span className="font-semibold text-slate-800">{viewingStudent.sessionPackage}</span></div>

@@ -16,14 +16,9 @@ import {
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BRANCHES } from "@/config/branches";
 import { INITIAL_ADMIN_EMPLOYEES } from "@/data/admin-mock";
 
 import { ExportColumn, exportToExcel, exportToPdf } from "@/utils/export-engine";
-
-interface AdminReportsProps {
-  selectedBranch: string;
-}
 
 const REPORT_COLUMNS: ExportColumn<any>[] = [
   { header: "Program Module", key: "module" },
@@ -42,12 +37,11 @@ const REPORT_ROWS = [
   { module: "Club Membership", workbook: "Membership.xlsx [Sheet 1]", count: "52 Members", revenue: "₹10,24,000", due: "₹24,000", status: "Active" },
   { module: "Flexible 30-Hour Pass", workbook: "Membership.xlsx [Sheet 2]", count: "34 Passes", revenue: "₹4,12,000", due: "₹10,500", status: "Active" },
   { module: "Super Moms Badminton", workbook: "Super Moms.xlsx [Sheet 1]", count: "16 Members", revenue: "₹1,44,000", due: "₹1,800", status: "Active" },
-  { module: "Point of Sale & Booking", workbook: "Sales.xlsx [Sheet 1]", count: "240 Orders", revenue: "₹3,84,000", due: "₹0", status: "Active" },
+  { module: "PRO BD Shop", workbook: "PRO_BD_Shop.xlsx [Sheet 1]", count: "240 Orders", revenue: "₹3,84,000", due: "₹0", status: "Active" },
 ];
 
-export function AdminReports({ selectedBranch }: AdminReportsProps) {
+export function AdminReports() {
   const [dateRange, setDateRange] = useState("Month to Date (March 2026)");
-  const [branchFilter, setBranchFilter] = useState(selectedBranch);
   const [employeeFilter, setEmployeeFilter] = useState("All");
   const [moduleFilter, setModuleFilter] = useState("All");
   const [exportNotice, setExportNotice] = useState<string | null>(null);
@@ -59,7 +53,7 @@ export function AdminReports({ selectedBranch }: AdminReportsProps) {
     } else {
       exportToPdf(
         "Executive Operational Summary Report",
-        `Date Range: ${dateRange} | Branch: ${branchFilter === "all" ? "All Branches" : branchFilter}`,
+        `Date Range: ${dateRange} | PRO Badminton Academy`,
         REPORT_ROWS,
         REPORT_COLUMNS,
         filename
@@ -140,23 +134,6 @@ export function AdminReports({ selectedBranch }: AdminReportsProps) {
             </select>
           </div>
 
-          {/* Branch Filter */}
-          <div className="flex flex-col gap-1">
-            <span className="font-semibold text-slate-500">Branch</span>
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="h-9.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600/20"
-            >
-              <option value="all">All Branches</option>
-              {BRANCHES.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Employee Filter */}
           <div className="flex flex-col gap-1">
             <span className="font-semibold text-slate-500">Employee</span>
@@ -183,7 +160,7 @@ export function AdminReports({ selectedBranch }: AdminReportsProps) {
               className="h-9.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600/20"
             >
               <option value="All">All Operations Modules</option>
-              <option value="Sales">Sales & Invoices</option>
+              <option value="PRO BD Shop">PRO BD Shop &amp; Invoices</option>
               <option value="Kids Coaching">Kids Coaching</option>
               <option value="Kids Coaching 1-1">Kids Coaching 1-1</option>
               <option value="Adults Coaching">Adults Coaching</option>

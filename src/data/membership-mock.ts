@@ -1,7 +1,6 @@
 import { MembershipRecord } from "@/types/membership";
 
 export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
-  // --- Nallagandla Branch Records (NLG004 - Rahul Sharma) ---
   {
     id: "mem-1",
     serialNumber: 1,
@@ -23,14 +22,12 @@ export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
     currentMonth: "March",
     year: 2026,
     remarks: "Family membership with 3 dependents. Access to all courts & gym.",
-    branchId: "branch-nlg",
-    branchName: "Nallagandla",
-    employeeId: "NLG004",
+    employeeId: "EMP001",
     employeeName: "Rahul Sharma",
-    createdBy: "NLG004",
+    createdBy: "EMP001",
     createdAt: "2026-01-01T09:00:00Z",
     updatedAt: "2026-03-01T10:00:00Z",
-    lastModifiedBy: "NLG004",
+    lastModifiedBy: "EMP001",
     additionalMembers: [
       {
         id: "lm-1-1",
@@ -76,14 +73,12 @@ export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
     currentMonth: "March",
     year: 2026,
     remarks: "Installment payment scheduled for next week.",
-    branchId: "branch-nlg",
-    branchName: "Nallagandla",
-    employeeId: "NLG004",
+    employeeId: "EMP001",
     employeeName: "Rahul Sharma",
-    createdBy: "NLG004",
+    createdBy: "EMP001",
     createdAt: "2026-01-10T11:30:00Z",
     updatedAt: "2026-03-02T14:15:00Z",
-    lastModifiedBy: "NLG004",
+    lastModifiedBy: "EMP001",
     additionalMembers: [
       {
         id: "lm-2-1",
@@ -121,15 +116,13 @@ export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
     status: "Active",
     currentMonth: "March",
     year: 2026,
-    remarks: "Monthly renewal pending parent approval.",
-    branchId: "branch-nlg",
-    branchName: "Nallagandla",
-    employeeId: "NLG004",
+    remarks: "Monthly renewal pending member approval.",
+    employeeId: "EMP001",
     employeeName: "Rahul Sharma",
-    createdBy: "NLG004",
+    createdBy: "EMP001",
     createdAt: "2026-02-01T10:00:00Z",
     updatedAt: "2026-03-03T16:00:00Z",
-    lastModifiedBy: "NLG004",
+    lastModifiedBy: "EMP001",
     additionalMembers: [
       {
         id: "lm-3-1",
@@ -161,18 +154,14 @@ export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
     currentMonth: "February",
     year: 2026,
     remarks: "Single individual elite player membership.",
-    branchId: "branch-nlg",
-    branchName: "Nallagandla",
-    employeeId: "NLG004",
+    employeeId: "EMP001",
     employeeName: "Rahul Sharma",
-    createdBy: "NLG004",
+    createdBy: "EMP001",
     createdAt: "2026-01-05T08:00:00Z",
     updatedAt: "2026-02-28T09:00:00Z",
-    lastModifiedBy: "NLG004",
+    lastModifiedBy: "EMP001",
     additionalMembers: [],
   },
-
-  // --- Manikonda Branch Records (MNK001 - Vikram Reddy) ---
   {
     id: "mem-5",
     serialNumber: 5,
@@ -193,15 +182,13 @@ export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
     status: "Active",
     currentMonth: "February",
     year: 2026,
-    remarks: "Quarterly corporate family package at Manikonda.",
-    branchId: "branch-mnk",
-    branchName: "Manikonda",
-    employeeId: "MNK001",
+    remarks: "Quarterly corporate family package.",
+    employeeId: "EMP005",
     employeeName: "Vikram Reddy",
-    createdBy: "MNK001",
+    createdBy: "EMP005",
     createdAt: "2026-02-15T13:00:00Z",
     updatedAt: "2026-02-20T11:30:00Z",
-    lastModifiedBy: "MNK001",
+    lastModifiedBy: "EMP005",
     additionalMembers: [
       {
         id: "lm-5-1",
@@ -232,15 +219,13 @@ export const INITIAL_MEMBERSHIP_RECORDS: MembershipRecord[] = [
     status: "Inactive",
     currentMonth: "January",
     year: 2026,
-    remarks: "Temporarily inactive due to club relocation.",
-    branchId: "branch-mnk",
-    branchName: "Manikonda",
-    employeeId: "MNK001",
+    remarks: "Temporarily inactive due to travel.",
+    employeeId: "EMP005",
     employeeName: "Vikram Reddy",
-    createdBy: "MNK001",
+    createdBy: "EMP005",
     createdAt: "2026-01-02T10:00:00Z",
     updatedAt: "2026-01-25T15:00:00Z",
-    lastModifiedBy: "MNK001",
+    lastModifiedBy: "EMP005",
     additionalMembers: [
       {
         id: "lm-6-1",

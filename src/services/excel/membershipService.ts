@@ -1,19 +1,17 @@
 /**
  * Membership Module Service
  * 
- * Future Excel Mapping:
+ * Master Excel Mapping:
  * Membership Module          -> Membership.xlsx -> Membership Worksheet
  * Flexible Membership Module -> Membership.xlsx -> Flexible Membership Worksheet
  * 
- * Data Flow:
- * Employee UI -> membershipService -> excelService -> Membership.xlsx [Both Worksheets]
+ * Single Location Architecture
  */
 
 import { excelService } from "./excelService";
-import { EXCEL_WORKSHEETS } from "@/types/excel";
+import { EXCEL_WORKSHEETS, EmployeeAuditMeta } from "@/types/excel";
 import { MembershipRecord } from "@/types/membership";
 import { FlexibleMembershipRecord } from "@/types/flexible-membership";
-import { BranchRecordMeta } from "@/types/branch";
 
 export class MembershipService {
   // Master Workbook: Membership.xlsx
@@ -29,26 +27,18 @@ export class MembershipService {
   // 1. Regular Club Membership - Worksheet 1
   // ==========================================================================
 
-  getSnapshot(branchId?: string): MembershipRecord[] {
-    const records = excelService.getWorksheetSnapshot<MembershipRecord>(
+  getSnapshot(): MembershipRecord[] {
+    return excelService.getWorksheetSnapshot<MembershipRecord>(
       this.regularWorkbook,
       this.regularWorksheet
     );
-    if (branchId) {
-      return records.filter((r) => r.branchId === branchId);
-    }
-    return records;
   }
 
-  async getAll(branchId?: string): Promise<MembershipRecord[]> {
-    const all = await excelService.readWorksheet<MembershipRecord>(
+  async getAll(): Promise<MembershipRecord[]> {
+    return excelService.readWorksheet<MembershipRecord>(
       this.regularWorkbook,
       this.regularWorksheet
     );
-    if (branchId) {
-      return all.filter((r) => r.branchId === branchId);
-    }
-    return all;
   }
 
   async getById(id: string): Promise<MembershipRecord | null> {
@@ -59,14 +49,13 @@ export class MembershipService {
     );
   }
 
-  async search(query: string, branchId?: string): Promise<MembershipRecord[]> {
+  async search(query: string): Promise<MembershipRecord[]> {
     const cleanPhone = query.trim().replace(/\D/g, "");
     const cleanText = query.trim().toLowerCase();
     return excelService.queryWorksheet<MembershipRecord>(
       this.regularWorkbook,
       this.regularWorksheet,
       (item) => {
-        if (branchId && item.branchId !== branchId) return false;
         if (!cleanText) return true;
         const phone = item.primaryMobileNumber.replace(/\D/g, "");
         const hasLinkedMatch = item.additionalMembers.some(
@@ -95,8 +84,6 @@ export class MembershipService {
       | "recordId"
       | "serialNumber"
       | "membershipId"
-      | "branchId"
-      | "branchName"
       | "employeeId"
       | "employeeName"
       | "createdAt"
@@ -104,7 +91,7 @@ export class MembershipService {
       | "lastModifiedBy"
       | "createdBy"
     >,
-    auditMeta: BranchRecordMeta
+    auditMeta: EmployeeAuditMeta
   ): Promise<MembershipRecord> {
     const timestamp = new Date().toISOString();
     const allMembers = await this.getAll();
@@ -116,7 +103,7 @@ export class MembershipService {
     );
     const serialNumber = maxSerial + 1;
     const formattedId = `MEM-2026-${String(serialNumber).padStart(3, "0")}`;
-    const id = `mem-${Date.now()}`;
+    const id = `mem-${crypto.randomUUID()}`;
 
     const newRecord: MembershipRecord = {
       ...data,
@@ -126,8 +113,6 @@ export class MembershipService {
       membershipId: formattedId,
       paymentMethod: data.paymentMethod || "UPI",
       status: data.status === "Inactive" ? "Inactive" : "Active",
-      branchId: auditMeta.branchId,
-      branchName: auditMeta.branchName,
       employeeId: auditMeta.employeeId,
       employeeName: auditMeta.employeeName,
       createdBy: auditMeta.employeeId,
@@ -181,7 +166,6 @@ export class MembershipService {
       throw new Error(`Membership record ${id} not found for renewal.`);
     }
 
-    // Keep same serialNumber!
     const updates: Partial<MembershipRecord> = {
       membershipPlan: renewData.membershipPlan,
       expiryDate: renewData.expiryDate,
@@ -210,26 +194,18 @@ export class MembershipService {
   // 2. Flexible Membership - Worksheet 2
   // ==========================================================================
 
-  getSnapshotFlexible(branchId?: string): FlexibleMembershipRecord[] {
-    const records = excelService.getWorksheetSnapshot<FlexibleMembershipRecord>(
+  getSnapshotFlexible(): FlexibleMembershipRecord[] {
+    return excelService.getWorksheetSnapshot<FlexibleMembershipRecord>(
       this.flexibleWorkbook,
       this.flexibleWorksheet
     );
-    if (branchId) {
-      return records.filter((r) => r.branchId === branchId);
-    }
-    return records;
   }
 
-  async getAllFlexible(branchId?: string): Promise<FlexibleMembershipRecord[]> {
-    const all = await excelService.readWorksheet<FlexibleMembershipRecord>(
+  async getAllFlexible(): Promise<FlexibleMembershipRecord[]> {
+    return excelService.readWorksheet<FlexibleMembershipRecord>(
       this.flexibleWorkbook,
       this.flexibleWorksheet
     );
-    if (branchId) {
-      return all.filter((r) => r.branchId === branchId);
-    }
-    return all;
   }
 
   async getByIdFlexible(id: string): Promise<FlexibleMembershipRecord | null> {
@@ -247,8 +223,6 @@ export class MembershipService {
       | "recordId"
       | "serialNumber"
       | "flexibleMembershipId"
-      | "branchId"
-      | "branchName"
       | "employeeId"
       | "employeeName"
       | "createdAt"
@@ -256,7 +230,7 @@ export class MembershipService {
       | "lastModifiedBy"
       | "createdBy"
     >,
-    auditMeta: BranchRecordMeta
+    auditMeta: EmployeeAuditMeta
   ): Promise<FlexibleMembershipRecord> {
     const timestamp = new Date().toISOString();
     const existing = await this.getAllFlexible();
@@ -266,7 +240,7 @@ export class MembershipService {
     );
     const serialNumber = maxSerial + 1;
     const formattedId = `FLEX-2026-${String(serialNumber).padStart(3, "0")}`;
-    const id = `flex-${Date.now()}`;
+    const id = `flex-${crypto.randomUUID()}`;
 
     const newRecord: FlexibleMembershipRecord = {
       ...data,
@@ -274,8 +248,6 @@ export class MembershipService {
       recordId: id,
       serialNumber,
       flexibleMembershipId: formattedId,
-      branchId: auditMeta.branchId,
-      branchName: auditMeta.branchName,
       employeeId: auditMeta.employeeId,
       employeeName: auditMeta.employeeName,
       createdBy: auditMeta.employeeId,

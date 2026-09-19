@@ -103,9 +103,15 @@ class ExcelService {
     const key = this.getSheetKey(workbook, worksheet);
     const normalized = initialRows.map((row) => ({
       ...row,
-      recordId: row.recordId || row.id || `rec-${Date.now()}-${Math.random()}`,
+      recordId: row.recordId || row.id || `rec-${crypto.randomUUID()}`,
     }));
     this.store.set(key, normalized);
+  }
+
+  private notifyUpdate() {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("excel-data-updated"));
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -168,7 +174,7 @@ class ExcelService {
     const rows = this.store.get(key) || [];
     
     const timestamp = new Date().toISOString();
-    const finalRecordId = record.recordId || record.id || `rec-${Date.now()}`;
+    const finalRecordId = record.recordId || record.id || `rec-${crypto.randomUUID()}`;
 
     const completeRecord: T = {
       ...record,
@@ -179,11 +185,12 @@ class ExcelService {
       lastModifiedBy: record.lastModifiedBy || record.employeeId,
     };
 
-    rows.unshift(completeRecord);
-    this.store.set(key, rows);
+    const nextRows = [...rows, completeRecord];
+    this.store.set(key, nextRows);
 
     // [Future Excel Hook]:
     // await xlsxAdapter.appendRow(workbook, worksheet, completeRecord);
+    this.notifyUpdate();
     return { ...completeRecord };
   }
 
@@ -221,11 +228,12 @@ class ExcelService {
       lastModifiedBy: modifierEmployeeId || current.lastModifiedBy,
     };
 
-    rows[index] = updated;
-    this.store.set(key, rows);
+    const nextRows = rows.map((r, i) => (i === index ? updated : r));
+    this.store.set(key, nextRows);
 
     // [Future Excel Hook]:
     // await xlsxAdapter.updateRow(workbook, worksheet, id, updated);
+    this.notifyUpdate();
     return { ...updated };
   }
 
@@ -249,6 +257,7 @@ class ExcelService {
       this.store.set(key, filtered);
       // [Future Excel Hook]:
       // await xlsxAdapter.deleteRow(workbook, worksheet, id);
+      this.notifyUpdate();
       return true;
     }
     return false;

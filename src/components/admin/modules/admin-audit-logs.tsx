@@ -13,44 +13,29 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { INITIAL_AUDIT_LOGS, INITIAL_ADMIN_EMPLOYEES } from "@/data/admin-mock";
-import { BRANCHES } from "@/config/branches";
-import { SearchBar } from "@/components/kids-coaching/search-bar";
+import { UniversalSearch } from "@/components/ui/universal-search";
+import { universalMatch } from "@/lib/search";
 import { cn } from "@/lib/utils";
 
-interface AdminAuditLogsProps {
-  selectedBranch: string;
-}
-
-export function AdminAuditLogs({ selectedBranch }: AdminAuditLogsProps) {
+export function AdminAuditLogs() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [branchFilter, setBranchFilter] = useState("All");
   const [employeeFilter, setEmployeeFilter] = useState("All");
   const [moduleFilter, setModuleFilter] = useState("All");
 
   const filteredLogs = useMemo(() => {
     return INITIAL_AUDIT_LOGS.filter((log) => {
-      if (selectedBranch !== "all" && log.branchId !== selectedBranch) {
-        return false;
-      }
-      if (branchFilter !== "All" && log.branchId !== branchFilter) {
-        return false;
-      }
       if (employeeFilter !== "All" && log.employeeId !== employeeFilter) {
         return false;
       }
       if (moduleFilter !== "All" && log.module !== moduleFilter) {
         return false;
       }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchAction = log.action.toLowerCase().includes(q);
-        const matchEmp = log.employeeName.toLowerCase().includes(q);
-        const matchDetails = log.details?.toLowerCase().includes(q) || false;
-        if (!matchAction && !matchEmp && !matchDetails) return false;
+      if (searchQuery.trim() && !universalMatch(log, searchQuery)) {
+        return false;
       }
       return true;
     });
-  }, [selectedBranch, branchFilter, employeeFilter, moduleFilter, searchQuery]);
+  }, [employeeFilter, moduleFilter, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -75,27 +60,13 @@ export function AdminAuditLogs({ selectedBranch }: AdminAuditLogsProps) {
       {/* Filter Bar */}
       <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <SearchBar
+          <UniversalSearch
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Search action, employee, or detail..."
+            placeholder="Search by name, ID, phone, or email..."
           />
 
           <div className="flex flex-wrap items-center gap-2.5 text-xs">
-            {/* Branch */}
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600/20"
-            >
-              <option value="All">All Branches</option>
-              {BRANCHES.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-
             {/* Employee */}
             <select
               value={employeeFilter}
@@ -123,7 +94,9 @@ export function AdminAuditLogs({ selectedBranch }: AdminAuditLogsProps) {
               <option value="Membership">Membership</option>
               <option value="Flexible Membership">Flexible Membership</option>
               <option value="Super Moms">Super Moms</option>
-              <option value="Sales">Sales</option>
+              <option value="PRO BD Shop">PRO BD Shop</option>
+              <option value="Inventory">Inventory</option>
+              <option value="Purchase History">Purchase History</option>
               <option value="Settings">Settings</option>
             </select>
           </div>
@@ -173,13 +146,6 @@ export function AdminAuditLogs({ selectedBranch }: AdminAuditLogsProps) {
                         <span>{log.employeeName}</span>
                         <span className="font-mono text-[11px] text-slate-400">
                           ({log.employeeId})
-                        </span>
-                      </span>
-
-                      <span className="flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="font-semibold text-slate-700">
-                          {log.branchName}
                         </span>
                       </span>
                     </div>

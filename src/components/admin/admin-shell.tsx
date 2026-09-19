@@ -6,6 +6,8 @@ import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
 import { AdminEmployees } from "@/components/admin/modules/admin-employees";
 import { AdminSales } from "@/components/admin/modules/admin-sales";
+import { AdminInventory } from "@/components/admin/modules/admin-inventory";
+import { AdminPurchaseHistory } from "@/components/admin/modules/admin-purchase-history";
 import { AdminKidsCoaching } from "@/components/admin/modules/admin-kids-coaching";
 import { AdminKidsCoaching1on1 } from "@/components/admin/modules/admin-kids-coaching-1on1";
 import { AdminAdultsCoaching } from "@/components/admin/modules/admin-adults-coaching";
@@ -13,15 +15,16 @@ import { AdminAdultsCoaching1on1 } from "@/components/admin/modules/admin-adults
 import { AdminMembership } from "@/components/admin/modules/admin-membership";
 import { AdminFlexibleMembership } from "@/components/admin/modules/admin-flexible-membership";
 import { AdminSuperMoms } from "@/components/admin/modules/admin-super-moms";
-import { AdminBranches } from "@/components/admin/modules/admin-branches";
 import { AdminReports } from "@/components/admin/modules/admin-reports";
 import { AdminAuditLogs } from "@/components/admin/modules/admin-audit-logs";
-import { AdminSettings } from "@/components/admin/modules/admin-settings";
 import { cn } from "@/lib/utils";
 
 const MODULE_TITLES: Record<AdminModuleId, string> = {
   employees: "Employee Directory & Access Control",
-  sales: "Sales & Invoicing",
+  "pro-bd-shop": "PRO BD Shop Management & Invoicing",
+  sales: "PRO BD Shop Management & Invoicing",
+  inventory: "Master Inventory & Stock Management",
+  "purchase-history": "Purchase History & Supplier Bills",
   "kids-coaching": "Kids Coaching",
   "kids-coaching-1-1": "Kids Coaching 1-1",
   "adults-coaching": "Adults Coaching",
@@ -29,15 +32,12 @@ const MODULE_TITLES: Record<AdminModuleId, string> = {
   membership: "Club Membership",
   "flexible-membership": "Flexible 30-Hour Membership",
   "super-moms": "Super Moms Badminton",
-  branches: "Branch Operations & Facilities",
   reports: "Business Intelligence & Reports",
   "audit-logs": "Security & System Audit Trail",
-  settings: "Platform Configuration & Master Settings",
 };
 
 export function AdminShell() {
   const [currentModule, setCurrentModule] = useState<AdminModuleId>("employees");
-  const [selectedBranch, setSelectedBranch] = useState<string>("all");
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
 
@@ -46,33 +46,34 @@ export function AdminShell() {
   const renderModule = () => {
     switch (currentModule) {
       case "employees":
-        return <AdminEmployees selectedBranch={selectedBranch} />;
+        return <AdminEmployees />;
+      case "pro-bd-shop":
       case "sales":
-        return <AdminSales selectedBranch={selectedBranch} />;
+        return <AdminSales />;
+      case "inventory":
+        return <AdminInventory />;
+      case "purchase-history":
+        return <AdminPurchaseHistory />;
       case "kids-coaching":
-        return <AdminKidsCoaching selectedBranch={selectedBranch} />;
+        return <AdminKidsCoaching />;
       case "kids-coaching-1-1":
-        return <AdminKidsCoaching1on1 selectedBranch={selectedBranch} />;
+        return <AdminKidsCoaching1on1 />;
       case "adults-coaching":
-        return <AdminAdultsCoaching selectedBranch={selectedBranch} />;
+        return <AdminAdultsCoaching />;
       case "adults-coaching-1-1":
-        return <AdminAdultsCoaching1on1 selectedBranch={selectedBranch} />;
+        return <AdminAdultsCoaching1on1 />;
       case "membership":
-        return <AdminMembership selectedBranch={selectedBranch} />;
+        return <AdminMembership />;
       case "flexible-membership":
-        return <AdminFlexibleMembership selectedBranch={selectedBranch} />;
+        return <AdminFlexibleMembership />;
       case "super-moms":
-        return <AdminSuperMoms selectedBranch={selectedBranch} />;
-      case "branches":
-        return <AdminBranches selectedBranch={selectedBranch} />;
+        return <AdminSuperMoms />;
       case "reports":
-        return <AdminReports selectedBranch={selectedBranch} />;
+        return <AdminReports />;
       case "audit-logs":
-        return <AdminAuditLogs selectedBranch={selectedBranch} />;
-      case "settings":
-        return <AdminSettings />;
+        return <AdminAuditLogs />;
       default:
-        return <AdminEmployees selectedBranch={selectedBranch} />;
+        return <AdminEmployees />;
     }
   };
 
@@ -98,8 +99,6 @@ export function AdminShell() {
         {/* Fixed Admin Header */}
         <AdminHeader
           title={title}
-          selectedBranch={selectedBranch}
-          onSelectBranch={setSelectedBranch}
           onOpenMobileNav={() => setIsMobileOpen(true)}
         />
 

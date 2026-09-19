@@ -103,7 +103,7 @@ export function FlexibleMembershipModal({
   const handleAddAdditionalMember = () => {
     const newIdx = additionalMembers.length + 1;
     const newMember: LinkedMember = {
-      id: `flx-m-${Date.now()}-${newIdx}`,
+      id: `flx-m-${crypto.randomUUID()}`,
       memberId: `FLX-M-${String(newIdx).padStart(3, "0")}`,
       name: "",
       mobileNumber: "",

@@ -19,7 +19,6 @@ export interface PaymentRecordMeta {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   amountPaid: number;
-  branchId: string;
   employeeId: string;
   timestamp?: string;
 }

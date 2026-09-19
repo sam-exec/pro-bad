@@ -1,16 +1,15 @@
 /**
  * Sales Module Service
  * 
- * Future Excel Mapping:
+ * Master Excel Mapping:
  * Sales Module -> Sales.xlsx -> Sales Worksheet
  * 
- * Data Flow:
- * Employee UI -> salesService -> excelService -> Sales.xlsx [Sales Worksheet]
+ * Single Location Architecture
  */
 
 import { excelService } from "./excelService";
-import { EXCEL_WORKSHEETS } from "@/types/excel";
-import { SalesRecord, BranchRecordMeta } from "@/types/branch";
+import { EXCEL_WORKSHEETS, EmployeeAuditMeta } from "@/types/excel";
+import { SalesRecord } from "@/types/sales";
 
 export class SalesService {
   private readonly workbook = EXCEL_WORKSHEETS.SALES.workbook;
@@ -19,29 +18,21 @@ export class SalesService {
   /**
    * Synchronous snapshot for instant UI render
    */
-  getSnapshot(branchId?: string): SalesRecord[] {
-    const records = excelService.getWorksheetSnapshot<SalesRecord>(
+  getSnapshot(): SalesRecord[] {
+    return excelService.getWorksheetSnapshot<SalesRecord>(
       this.workbook,
       this.worksheet
     );
-    if (branchId) {
-      return records.filter((r) => r.branchId === branchId);
-    }
-    return records;
   }
 
   /**
-   * Fetch all sales records (filtered by branch if provided)
+   * Fetch all sales records
    */
-  async getAll(branchId?: string): Promise<SalesRecord[]> {
-    const all = await excelService.readWorksheet<SalesRecord>(
+  async getAll(): Promise<SalesRecord[]> {
+    return excelService.readWorksheet<SalesRecord>(
       this.workbook,
       this.worksheet
     );
-    if (branchId) {
-      return all.filter((r) => r.branchId === branchId);
-    }
-    return all;
   }
 
   /**
@@ -58,13 +49,12 @@ export class SalesService {
   /**
    * Search sales records by customer name, invoice, or phone
    */
-  async search(query: string, branchId?: string): Promise<SalesRecord[]> {
+  async search(query: string): Promise<SalesRecord[]> {
     const cleanQuery = query.trim().toLowerCase();
     return excelService.queryWorksheet<SalesRecord>(
       this.workbook,
       this.worksheet,
       (record) => {
-        if (branchId && record.branchId !== branchId) return false;
         if (!cleanQuery) return true;
         return (
           record.customerName.toLowerCase().includes(cleanQuery) ||
@@ -78,7 +68,6 @@ export class SalesService {
 
   /**
    * Create a new sales record in Sales.xlsx -> Sales Worksheet.
-   * Stamped with hidden metadata: Record ID, Branch ID, Branch Name, Employee ID, Employee Name, Created At, Updated At, Last Modified By.
    */
   async create(
     data: Omit<
@@ -86,8 +75,6 @@ export class SalesService {
       | "id"
       | "recordId"
       | "invoiceNumber"
-      | "branchId"
-      | "branchName"
       | "employeeId"
       | "employeeName"
       | "createdAt"
@@ -95,21 +82,18 @@ export class SalesService {
       | "lastModifiedBy"
       | "createdBy"
     >,
-    auditMeta: BranchRecordMeta
+    auditMeta: EmployeeAuditMeta
   ): Promise<SalesRecord> {
     const timestamp = new Date().toISOString();
-    const count = (await this.getAll(auditMeta.branchId)).length + 1;
-    const branchCode = auditMeta.branchName.substring(0, 3).toUpperCase();
-    const id = `sale-${Date.now()}`;
-    const invoiceNumber = `INV-2026-${branchCode}-${String(count).padStart(3, "0")}`;
+    const count = (await this.getAll()).length + 1;
+    const id = `sale-${crypto.randomUUID()}`;
+    const invoiceNumber = `INV-2026-${String(count).padStart(4, "0")}`;
 
     const newRecord: SalesRecord = {
       ...data,
       id,
       recordId: id,
       invoiceNumber,
-      branchId: auditMeta.branchId,
-      branchName: auditMeta.branchName,
       employeeId: auditMeta.employeeId,
       employeeName: auditMeta.employeeName,
       createdBy: auditMeta.employeeId,

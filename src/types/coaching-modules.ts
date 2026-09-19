@@ -1,15 +1,32 @@
 import { PaymentStatus, StudentStatus, Gender, PaymentMethod } from "./kids-coaching";
+import { ExcelRecordMeta } from "./excel";
 
 export interface AuditMetadata {
   recordId: string;
-  branchId: string;
-  branchName: string;
   employeeId: string;
   employeeName: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
   lastModifiedBy: string;
+}
+
+export interface SuperMomsRecord extends ExcelRecordMeta {
+  id: string;
+  serialNumber?: number;
+  memberId?: string;
+  memberName: string;
+  mobileNumber: string;
+  batch: string;
+  coach: string;
+  monthlyFee: number;
+  amountPaid: number;
+  dueAmount: number;
+  paymentStatus: PaymentStatus;
+  paymentMethod: PaymentMethod;
+  joiningDate: string;
+  status: "Active" | "Inactive";
+  createdBy: string;
 }
 
 // 1. Kids Coaching 1-1

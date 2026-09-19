@@ -7,16 +7,17 @@ import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 
 interface StudentRowProps {
   student: Student;
+  serialNumber: number;
   onView: (student: Student) => void;
   onEdit: (student: Student) => void;
 }
 
-export function StudentRow({ student, onView, onEdit }: StudentRowProps) {
+export function StudentRow({ student, serialNumber, onView, onEdit }: StudentRowProps) {
   return (
     <tr className="hover:bg-blue-50/40 transition-colors border-b border-slate-200/80 text-xs text-slate-700">
       {/* 1. Serial Number */}
       <td className="px-3.5 py-3 font-mono font-medium text-slate-900 whitespace-nowrap">
-        #{student.serialNumber}
+        #{serialNumber}
       </td>
 
       {/* 2. Student Name */}

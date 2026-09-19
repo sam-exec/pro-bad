@@ -25,10 +25,9 @@ export interface ProductVariant {
   attributes: Record<string, string>; // { "Weight": "4U", "Grip Size": "G5", "Color": "Cherry Sunburst" }
   costPrice: number; // e.g., 140
   sellingPrice: number; // e.g., 220
-  stockQuantity: number; // Current branch stock
+  stockQuantity: number; // Current stock quantity
   lowStockThreshold: number; // e.g., 5
   status: VariantStatus;
-  branchId: string; // Branch isolation support
   image?: string;
   notes?: string;
   createdAt: string;
@@ -91,8 +90,6 @@ export interface POSSalePayload {
   totalAmount: number;
   paymentMethod: PaymentMethod;
   notes?: string;
-  branchId: string;
-  branchName: string;
   employeeId: string;
   employeeName: string;
 }

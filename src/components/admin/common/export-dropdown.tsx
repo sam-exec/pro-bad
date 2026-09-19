@@ -210,7 +210,7 @@ export function ExportDropdown<T>({
               </span>
             </div>
             <p className="text-[11px] text-slate-400 px-1 leading-tight">
-              Exports all records inside this module across all branches.
+              Exports all registered records inside this module.
             </p>
             <div className="grid grid-cols-3 gap-1.5 pt-1">
               <button

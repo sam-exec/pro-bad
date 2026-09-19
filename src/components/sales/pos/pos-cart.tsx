@@ -22,8 +22,6 @@ import { PaymentMethod } from "@/types/payment";
 
 interface POSCartProps {
   cart: CartItem[];
-  branchId: string;
-  branchName: string;
   employeeId: string;
   employeeName: string;
   onUpdateQuantity: (variantId: string, qty: number) => void;
@@ -34,8 +32,6 @@ interface POSCartProps {
 
 export function POSCart({
   cart,
-  branchId,
-  branchName,
   employeeId,
   employeeName,
   onUpdateQuantity,
@@ -93,8 +89,6 @@ export function POSCart({
         taxAmount,
         totalAmount,
         paymentMethod,
-        branchId,
-        branchName,
         employeeId,
         employeeName,
       };

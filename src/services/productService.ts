@@ -44,8 +44,8 @@ class ProductService {
     this.listeners.forEach((cb) => {
       try {
         cb();
-      } catch (e) {
-        console.error("ProductService listener error:", e);
+      } catch {
+        // Ignore subscriber errors
       }
     });
   }
@@ -81,7 +81,7 @@ class ProductService {
     const product = this.products.find((p) => p.id === productId);
     if (!product) throw new Error(`Product ${productId} not found`);
 
-    const modelId = `mod-${productId.replace("prod-", "")}-${Date.now().toString().slice(-4)}`;
+    const modelId = `mod-${productId.replace("prod-", "")}-${crypto.randomUUID().slice(0, 8)}`;
     const newModel: ProductModel = {
       id: modelId,
       productId,
@@ -104,7 +104,6 @@ class ProductService {
     category?: ProductCategory | "All";
     productId?: string;
     modelId?: string;
-    branchId?: string;
     search?: string;
     status?: VariantStatus | "All";
     lowStockOnly?: boolean;
@@ -112,9 +111,6 @@ class ProductService {
     let list = [...this.variants];
 
     if (filter) {
-      if (filter.branchId && filter.branchId !== "all") {
-        list = list.filter((v) => v.branchId === filter.branchId);
-      }
       if (filter.category && filter.category !== "All") {
         list = list.filter((v) => v.category === filter.category);
       }
@@ -156,7 +152,7 @@ class ProductService {
     variantData: Omit<ProductVariant, "id" | "status" | "createdAt" | "updatedAt">
   ): ProductVariant {
     const timestamp = new Date().toISOString();
-    const id = `var-${Date.now()}`;
+    const id = `var-${crypto.randomUUID()}`;
 
     let status: VariantStatus = "In Stock";
     if (variantData.stockQuantity <= 0) {
@@ -257,11 +253,8 @@ class ProductService {
   public async processPOSSale(payload: POSSalePayload): Promise<InvoiceDetails> {
     const timestamp = new Date().toISOString();
     const count = this.invoices.length + 1;
-    const branchCode = payload.branchName
-      ? payload.branchName.substring(0, 3).toUpperCase()
-      : "NLG";
-    const invoiceNumber = `INV-2026-${branchCode}-${String(100 + count).padStart(4, "0")}`;
-    const invoiceId = `inv-${Date.now()}`;
+    const invoiceNumber = `INV-2026-${String(100 + count).padStart(4, "0")}`;
+    const invoiceId = `inv-${crypto.randomUUID()}`;
 
     // 1. Decrement inventory for each variant
     for (const item of payload.items) {
@@ -305,29 +298,24 @@ class ProductService {
           date: timestamp.split("T")[0],
         },
         {
-          branchId: payload.branchId || "branch-nlg",
-          branchName: payload.branchName || "Nallagandla",
-          employeeId: payload.employeeId || "NLG004",
-          employeeName: payload.employeeName || "Rahul Sharma",
+          employeeId: payload.employeeId || "EMP001",
+          employeeName: payload.employeeName || "Staff Member",
         }
       );
-    } catch (err) {
-      console.warn("Auto-sync to salesService excel sheet:", err);
+    } catch {
+      // Excel sync fallback
     }
 
     this.notify();
     return invoice;
   }
 
-  public getInvoices(branchId?: string): InvoiceDetails[] {
-    if (branchId && branchId !== "all") {
-      return this.invoices.filter((inv) => inv.branchId === branchId);
-    }
+  public getInvoices(): InvoiceDetails[] {
     return this.invoices;
   }
 
-  public getInventoryStats(branchId?: string) {
-    const list = this.getVariants({ branchId });
+  public getInventoryStats() {
+    const list = this.getVariants();
     const totalUnits = list.reduce((acc, v) => acc + v.stockQuantity, 0);
     const totalValuation = list.reduce(
       (acc, v) => acc + v.stockQuantity * v.sellingPrice,

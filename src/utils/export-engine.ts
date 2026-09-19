@@ -5,18 +5,18 @@ import autoTable from "jspdf-autotable";
 export interface ExportColumn<T = any> {
   header: string;
   key: string;
-  formatter?: (row: T) => string | number;
+  formatter?: (row: T, index: number) => string | number;
 }
 
 /**
  * Format records into array of plain objects matching the column definitions
  */
 function prepareData<T>(data: T[], columns: ExportColumn<T>[]): Record<string, any>[] {
-  return data.map((row) => {
+  return data.map((row, index) => {
     const item: Record<string, any> = {};
     columns.forEach((col) => {
       if (col.formatter) {
-        item[col.header] = col.formatter(row);
+        item[col.header] = col.formatter(row, index);
       } else {
         const val = (row as any)[col.key];
         item[col.header] = val !== undefined && val !== null ? val : "";

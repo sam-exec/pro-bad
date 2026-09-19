@@ -7,7 +7,6 @@ import {
   VariantStatus,
 } from "@/types/products";
 import { productService } from "@/services/productService";
-import { BRANCHES } from "@/config/branches";
 import {
   Search,
   Filter,
@@ -28,12 +27,10 @@ import {
 import { cn } from "@/lib/utils";
 
 interface InventoryTableProps {
-  selectedBranch: string;
   onOpenAddModal: () => void;
 }
 
 export function InventoryTable({
-  selectedBranch,
   onOpenAddModal,
 }: InventoryTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,26 +49,23 @@ export function InventoryTable({
   // Fetch variants with filter
   const variants = useMemo(() => {
     return productService.getVariants({
-      branchId: selectedBranch === "all" ? undefined : selectedBranch,
       category: categoryFilter,
       status: statusFilter,
       lowStockOnly,
       search: searchQuery,
     });
-  }, [selectedBranch, categoryFilter, statusFilter, lowStockOnly, searchQuery]);
+  }, [categoryFilter, statusFilter, lowStockOnly, searchQuery]);
 
   // Inventory KPI statistics
   const stats = useMemo(() => {
-    return productService.getInventoryStats(
-      selectedBranch === "all" ? undefined : selectedBranch
-    );
-  }, [selectedBranch, variants]);
+    return productService.getInventoryStats();
+  }, [variants]);
 
   const handleQuickStockChange = (variantId: string, diff: number) => {
     try {
       productService.adjustStock(variantId, diff);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // Ignore adjust stock error
     }
   };
 
@@ -93,8 +87,8 @@ export function InventoryTable({
         costPrice: Number(editCost) || 0,
       });
       setEditingVariant(null);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      // Ignore update variant error
     }
   };
 
@@ -220,7 +214,7 @@ export function InventoryTable({
                 : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
             )}
           >
-            All ({productService.getVariants({ branchId: selectedBranch === "all" ? undefined : selectedBranch }).length})
+            All ({productService.getVariants().length})
           </button>
           {categories.map((c) => (
             <button
@@ -261,7 +255,7 @@ export function InventoryTable({
       <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+            <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
               <tr>
                 <th className="py-3 px-4">SKU / Item</th>
                 <th className="py-3 px-4">Category / Product</th>

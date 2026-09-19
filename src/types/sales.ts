@@ -45,6 +45,8 @@ export interface SaleLineItem {
   lineTotal: number;
 }
 
+import { ExcelRecordMeta } from "./excel";
+
 export interface SaleTransaction {
   id: string;
   invoiceNumber: string;
@@ -55,8 +57,6 @@ export interface SaleTransaction {
   paymentMethod: PaymentMethod;
   employeeId: string;
   employeeName: string;
-  branchId: string;
-  branchName: string;
   date: string; // YYYY-MM-DD
   time: string; // HH:mm:ss
   createdAt: string; // ISO
@@ -65,7 +65,6 @@ export interface SaleTransaction {
 export type SalesDateFilter = "today" | "week" | "month" | "custom" | "all";
 
 export interface SalesFilterOptions {
-  branchId?: string;
   employeeId?: string;
   product?: string;
   dateFilter?: SalesDateFilter;
@@ -88,16 +87,21 @@ export interface AdminSalesSummary {
   employeeSummary: {
     employeeId: string;
     employeeName: string;
-    branchName: string;
     transactionCount: number;
     productsSold: number;
     totalAmount: number;
   }[];
-  branchSummary: {
-    branchId: string;
-    branchName: string;
-    transactionCount: number;
-    productsSold: number;
-    totalAmount: number;
-  }[];
+}
+
+export interface SalesRecord extends ExcelRecordMeta {
+  id: string;
+  invoiceNumber: string;
+  customerName: string;
+  customerMobile: string;
+  category: "Coaching" | "Membership" | "Court Booking" | "Merchandise";
+  description: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  date: string;
+  createdBy: string;
 }

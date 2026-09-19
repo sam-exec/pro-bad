@@ -1,19 +1,17 @@
 /**
  * Kids Coaching Module Service
  * 
- * Future Excel Mapping:
+ * Master Excel Mapping:
  * Kids Coaching Module     -> Kids Coaching.xlsx -> Kids Coaching Worksheet
  * Kids Coaching 1-1 Module -> Kids Coaching.xlsx -> Kids Coaching 1-1 Worksheet
  * 
- * Data Flow:
- * Employee UI -> kidsService -> excelService -> Kids Coaching.xlsx [Both Worksheets]
+ * Single Location Architecture
  */
 
 import { excelService } from "./excelService";
-import { EXCEL_WORKSHEETS } from "@/types/excel";
+import { EXCEL_WORKSHEETS, EmployeeAuditMeta } from "@/types/excel";
 import { Student, StudentFormData } from "@/types/kids-coaching";
 import { Kids1on1Student } from "@/types/coaching-modules";
-import { BranchRecordMeta } from "@/types/branch";
 
 export class KidsService {
   // Master Workbook: Kids Coaching.xlsx
@@ -29,26 +27,18 @@ export class KidsService {
   // 1. Kids Coaching (Group) - Worksheet 1
   // ==========================================================================
 
-  getSnapshot(branchId?: string): Student[] {
-    const students = excelService.getWorksheetSnapshot<Student>(
+  getSnapshot(): Student[] {
+    return excelService.getWorksheetSnapshot<Student>(
       this.groupWorkbook,
       this.groupWorksheet
     );
-    if (branchId) {
-      return students.filter((s) => s.branchId === branchId);
-    }
-    return students;
   }
 
-  async getAll(branchId?: string): Promise<Student[]> {
-    const all = await excelService.readWorksheet<Student>(
+  async getAll(): Promise<Student[]> {
+    return excelService.readWorksheet<Student>(
       this.groupWorkbook,
       this.groupWorksheet
     );
-    if (branchId) {
-      return all.filter((s) => s.branchId === branchId);
-    }
-    return all;
   }
 
   async getById(id: string): Promise<Student | null> {
@@ -59,13 +49,12 @@ export class KidsService {
     );
   }
 
-  async search(query: string, branchId?: string): Promise<Student[]> {
+  async search(query: string): Promise<Student[]> {
     const cleanQuery = query.trim().replace(/\D/g, "");
     return excelService.queryWorksheet<Student>(
       this.groupWorkbook,
       this.groupWorksheet,
       (s) => {
-        if (branchId && s.branchId !== branchId) return false;
         if (!cleanQuery) return true;
         const cleanPhone = s.mobileNumber.replace(/\D/g, "");
         return cleanPhone.includes(cleanQuery) || s.studentName.toLowerCase().includes(query.toLowerCase());
@@ -107,7 +96,7 @@ export class KidsService {
 
   async create(
     formData: StudentFormData,
-    auditMeta: BranchRecordMeta
+    auditMeta: EmployeeAuditMeta
   ): Promise<Student> {
     // 1. Cross-module enrollment check: Prevent duplicate in Kids One-to-One
     const alreadyIn1on1 = await this.existsIn1on1(
@@ -129,7 +118,7 @@ export class KidsService {
         : "Pending";
 
     const timestamp = new Date().toISOString();
-    const allStudents = await this.getAll(); // Global to get max sequence
+    const allStudents = await this.getAll();
     
     // Auto-generate sequential Serial Number (Never reused, continues from latest)
     const maxSerial = allStudents.reduce(
@@ -138,7 +127,7 @@ export class KidsService {
     );
     const serialNumber = maxSerial + 1;
     const formattedStudentId = `KC-2026-${String(serialNumber).padStart(3, "0")}`;
-    const id = `kc-${Date.now()}`;
+    const id = `kc-${crypto.randomUUID()}`;
 
     const newStudent: Student = {
       ...formData,
@@ -150,8 +139,6 @@ export class KidsService {
       paymentStatus,
       paymentMethod: formData.paymentMethod || "UPI",
       status: formData.status === "Inactive" ? "Inactive" : "Active",
-      branchId: auditMeta.branchId,
-      branchName: auditMeta.branchName,
       employeeId: auditMeta.employeeId,
       employeeName: auditMeta.employeeName,
       createdBy: auditMeta.employeeId,
@@ -193,26 +180,18 @@ export class KidsService {
   // 2. Kids Coaching 1-1 - Worksheet 2
   // ==========================================================================
 
-  getSnapshot1on1(branchId?: string): Kids1on1Student[] {
-    const records = excelService.getWorksheetSnapshot<Kids1on1Student>(
+  getSnapshot1on1(): Kids1on1Student[] {
+    return excelService.getWorksheetSnapshot<Kids1on1Student>(
       this.oneOnOneWorkbook,
       this.oneOnOneWorksheet
     );
-    if (branchId) {
-      return records.filter((r) => r.branchId === branchId);
-    }
-    return records;
   }
 
-  async getAll1on1(branchId?: string): Promise<Kids1on1Student[]> {
-    const all = await excelService.readWorksheet<Kids1on1Student>(
+  async getAll1on1(): Promise<Kids1on1Student[]> {
+    return excelService.readWorksheet<Kids1on1Student>(
       this.oneOnOneWorkbook,
       this.oneOnOneWorksheet
     );
-    if (branchId) {
-      return all.filter((r) => r.branchId === branchId);
-    }
-    return all;
   }
 
   async getById1on1(id: string): Promise<Kids1on1Student | null> {
@@ -223,14 +202,13 @@ export class KidsService {
     );
   }
 
-  async search1on1(query: string, branchId?: string): Promise<Kids1on1Student[]> {
+  async search1on1(query: string): Promise<Kids1on1Student[]> {
     const cleanPhoneQuery = query.trim().replace(/\D/g, "");
     const cleanText = query.trim().toLowerCase();
     return excelService.queryWorksheet<Kids1on1Student>(
       this.oneOnOneWorkbook,
       this.oneOnOneWorksheet,
       (item) => {
-        if (branchId && item.branchId !== branchId) return false;
         if (!cleanText) return true;
         const phone = item.parentMobile.replace(/\D/g, "");
         return (
@@ -249,8 +227,6 @@ export class KidsService {
       | "recordId"
       | "serialNumber"
       | "studentId"
-      | "branchId"
-      | "branchName"
       | "employeeId"
       | "employeeName"
       | "createdAt"
@@ -258,7 +234,7 @@ export class KidsService {
       | "lastModifiedBy"
       | "createdBy"
     >,
-    auditMeta: BranchRecordMeta
+    auditMeta: EmployeeAuditMeta
   ): Promise<Kids1on1Student> {
     // 1. Cross-module enrollment check: Prevent duplicate in Kids Coaching Group
     const alreadyInGroup = await this.existsInGroup(
@@ -281,7 +257,7 @@ export class KidsService {
     );
     const serialNumber = maxSerial + 1;
     const formattedId = `KC1-2026-${String(serialNumber).padStart(3, "0")}`;
-    const id = `kc1-${Date.now()}`;
+    const id = `kc1-${crypto.randomUUID()}`;
 
     const newRecord: Kids1on1Student = {
       ...data,
@@ -291,8 +267,6 @@ export class KidsService {
       studentId: formattedId,
       paymentMethod: data.paymentMethod || "UPI",
       status: data.status === "Inactive" ? "Inactive" : "Active",
-      branchId: auditMeta.branchId,
-      branchName: auditMeta.branchName,
       employeeId: auditMeta.employeeId,
       employeeName: auditMeta.employeeName,
       createdBy: auditMeta.employeeId,

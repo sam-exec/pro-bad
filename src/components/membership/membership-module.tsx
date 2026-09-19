@@ -1,53 +1,74 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Plus } from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
+import { Plus, Users, CreditCard, DollarSign, Eye, Edit2 } from "lucide-react";
 import { MembershipRecord } from "@/types/membership";
 import { PaymentMethod } from "@/types/payment";
+import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { membershipService } from "@/services/excel";
-import { SearchBar } from "@/components/kids-coaching/search-bar";
+import { UniversalSearch } from "@/components/ui/universal-search";
+import { universalMatch } from "@/lib/search";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
-import { MembershipTable } from "./membership-table";
+import { StatusBadge } from "@/components/kids-coaching/status-badge";
+import { PaymentBadge } from "@/components/kids-coaching/payment-badge";
 import { MembershipDetailsDrawer } from "./membership-details-drawer";
 import { MembershipFormModal } from "./membership-form-modal";
 import { Button } from "@/components/ui/button";
-import { useBranch } from "@/context/branch-context";
+import { ExportDropdown } from "@/components/admin/common/export-dropdown";
+import { ExportColumn } from "@/utils/export-engine";
+import { useAuth } from "@/context/auth-context";
+
+const EXPORT_COLUMNS: ExportColumn<MembershipRecord>[] = [
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
+  { header: "Primary Member", key: "primaryMemberName" },
+  { header: "Mobile", key: "primaryMobileNumber" },
+  { header: "Email", key: "email" },
+  { header: "Plan", key: "membershipPlan" },
+  {
+    header: "Additional Members",
+    key: "additionalMembers",
+    formatter: (r) => `${r.additionalMembers?.length || 0} members`,
+  },
+  { header: "Monthly Fee", key: "monthlyFee", formatter: (r) => `₹${r.monthlyFee}` },
+  { header: "Amount Paid", key: "amountPaid", formatter: (r) => `₹${r.amountPaid}` },
+  { header: "Due Amount", key: "dueAmount", formatter: (r) => `₹${r.dueAmount}` },
+  { header: "Payment Method", key: "paymentMethod" },
+  { header: "Payment Status", key: "paymentStatus" },
+  { header: "Status", key: "status" },
+  { header: "Joining Date", key: "joiningDate" },
+  { header: "Expiry Date", key: "expiryDate" },
+];
 
 export function MembershipModule() {
-  const { currentBranch, employeeId, employeeName } = useBranch();
+  const { employeeId, employeeName } = useAuth();
   const [memberships, setMemberships] = useState<MembershipRecord[]>(() =>
     membershipService.getSnapshot()
   );
+
+  useEffect(() => {
+    const handleUpdate = () => setMemberships(membershipService.getSnapshot());
+    window.addEventListener("excel-data-updated", handleUpdate);
+    return () => window.removeEventListener("excel-data-updated", handleUpdate);
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<PaymentMethod | "all">("all");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Modal & Drawer State
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [membershipToEdit, setMembershipToEdit] = useState<MembershipRecord | null>(
-    null
-  );
-  const [viewingMembership, setViewingMembership] = useState<MembershipRecord | null>(
-    null
-  );
+  const [membershipToEdit, setMembershipToEdit] = useState<MembershipRecord | null>(null);
+  const [viewingMembership, setViewingMembership] = useState<MembershipRecord | null>(null);
 
-  // Filter logic: Search by Primary Mobile + Branch Isolation + Month/Year + Payment Method
+  // Filter logic: Search by Primary Mobile + Month/Year + Payment Method
   const filteredMemberships = useMemo(() => {
     return memberships.filter((m) => {
-      // Branch Isolation
-      if (m.branchId && m.branchId !== currentBranch.id) {
+      // Universal Search
+      if (searchQuery.trim() && !universalMatch(m, searchQuery)) {
         return false;
-      }
-
-      // Primary mobile search
-      if (searchQuery.trim()) {
-        const cleanQuery = searchQuery.trim().replace(/\D/g, "");
-        const cleanPhone = m.primaryMobileNumber.replace(/\D/g, "");
-        if (!cleanPhone.includes(cleanQuery)) {
-          return false;
-        }
       }
 
       // Month filter
@@ -67,20 +88,42 @@ export function MembershipModule() {
 
       return true;
     });
-  }, [memberships, currentBranch.id, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
+  }, [memberships, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
 
-  // Aggregate stats
+  const selectedRecords = useMemo(() => {
+    return memberships.filter((r) => selectedIds.includes(r.id));
+  }, [memberships, selectedIds]);
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const isAllSelected =
+    filteredMemberships.length > 0 &&
+    filteredMemberships.every((r) => selectedIds.includes(r.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      const cur = new Set(filteredMemberships.map((r) => r.id));
+      setSelectedIds((prev) => prev.filter((id) => !cur.has(id)));
+    } else {
+      const cur = filteredMemberships.map((r) => r.id);
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...cur])));
+    }
+  };
+
+  // Aggregate stats matching admin metrics
   const metrics = useMemo(() => {
-    const totalAccounts = filteredMemberships.length;
-    const totalPeople = filteredMemberships.reduce(
-      (acc, m) => acc + 1 + (m.additionalMembers?.length || 0),
+    const total = filteredMemberships.length;
+    const active = filteredMemberships.filter((r) => r.status === "Active").length;
+    const totalDue = filteredMemberships.reduce((sum, r) => sum + r.dueAmount, 0);
+    const familyMembers = filteredMemberships.reduce(
+      (sum, r) => sum + 1 + (r.additionalMembers?.length || 0),
       0
     );
-    const totalCollected = filteredMemberships.reduce(
-      (acc, m) => acc + m.amountPaid,
-      0
-    );
-    return { totalAccounts, totalPeople, totalCollected };
+    return { total, active, totalDue, familyMembers };
   }, [filteredMemberships]);
 
   // Save / Update Handler
@@ -124,8 +167,6 @@ export function MembershipModule() {
           additionalMembers: data.additionalMembers || [],
         },
         {
-          branchId: currentBranch.id,
-          branchName: currentBranch.name,
           employeeId,
           employeeName,
         }
@@ -133,6 +174,8 @@ export function MembershipModule() {
 
       setMemberships((prev) => [created, ...prev]);
     }
+    setIsFormOpen(false);
+    setMembershipToEdit(null);
   };
 
   return (
@@ -142,39 +185,124 @@ export function MembershipModule() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Membership
+              Club Membership
             </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
-              📍 {currentBranch.name}
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>{filteredMemberships.length} Plans</span>
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Manage memberships and linked family members at <span className="font-semibold text-slate-700">{currentBranch.name} Branch</span>.
+            Regular club members, family memberships, and court subscription packages.
           </p>
         </div>
 
-        {/* Quick Stat Chips */}
-        <div className="flex items-center gap-2.5 text-xs">
-          <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-600 font-medium shadow-2xs">
-            Accounts: <strong className="text-slate-900">{metrics.totalAccounts}</strong>
-          </span>
-          <span className="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 font-medium shadow-2xs">
-            Total Members: <strong className="text-indigo-950">{metrics.totalPeople}</strong>
-          </span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <ExportDropdown
+            moduleName="Membership"
+            moduleTitle="Club Membership Registry"
+            subtitle="Facility Registry"
+            columns={EXPORT_COLUMNS}
+            currentViewData={filteredMemberships}
+            selectedData={selectedRecords}
+            entireModuleData={memberships}
+          />
+          <Button
+            onClick={() => {
+              setMembershipToEdit(null);
+              setIsFormOpen(true);
+            }}
+            className="h-10 px-4 rounded-xl gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Membership</span>
+          </Button>
         </div>
       </div>
 
-      {/* Top Action Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex-1">
-          <SearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search by Primary Member Phone (e.g. 9876543210)..."
-          />
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Active Plans */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Active Plans
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
+              {metrics.total}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Registered memberships
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+            <CreditCard className="w-6 h-6" />
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        {/* Total Beneficiaries */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Total Beneficiaries
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block">
+              {metrics.familyMembers}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Primary &amp; family members
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Active Status */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Active Status
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-purple-600 mt-1 block">
+              {metrics.active}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              In-validity memberships
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+            <CreditCard className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Pending Dues */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Pending Dues
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-rose-600 mt-1 block">
+              ₹{metrics.totalDue}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Outstanding subscription fees
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+            <DollarSign className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <UniversalSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search by name, ID, phone, or email..."
+        />
+        <div className="flex items-center gap-2.5 flex-wrap">
           <PaymentMethodFilter
             value={paymentMethodFilter}
             onChange={setPaymentMethodFilter}
@@ -185,67 +313,132 @@ export function MembershipModule() {
             selectedYear={selectedYear}
             onYearChange={setSelectedYear}
           />
-          <Button
-            onClick={() => {
-              setMembershipToEdit(null);
-              setIsFormOpen(true);
-            }}
-            className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold h-10 px-4 rounded-xl shadow-xs shrink-0 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Membership</span>
-          </Button>
         </div>
       </div>
 
-      {/* Filter Reset Indicator */}
-      {(searchQuery || selectedMonth !== "All" || paymentMethodFilter !== "all") && (
-        <div className="flex items-center justify-between px-1 text-xs text-slate-500">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span>Filtering by:</span>
-            {searchQuery && (
-              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-medium">
-                Phone: {searchQuery}
-              </span>
-            )}
-            {selectedMonth !== "All" && (
-              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-medium">
-                Month: {selectedMonth}
-              </span>
-            )}
-            {paymentMethodFilter !== "all" && (
-              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-medium">
-                Method: {paymentMethodFilter}
-              </span>
-            )}
+      {/* Table */}
+      {filteredMemberships.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white p-12 text-center">
+          <CreditCard className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-slate-800">No membership records found</h3>
+          <p className="text-xs text-slate-500 mt-1">Adjust filters or enroll a new club member.</p>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+          <div className="overflow-x-auto max-h-[calc(100vh-320px)] scrollbar-thin">
+            <table className="w-full border-collapse text-left">
+              <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
+                <tr>
+                  <th className="px-3.5 py-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={handleToggleSelectAll}
+                      className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    />
+                  </th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Primary Member</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Mobile</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Plan Details</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Additional Members</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Fee</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Paid</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Due</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Joining Date</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap sticky right-0 bg-slate-50">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200/80">
+                {filteredMemberships.map((r, index) => {
+                  const isChecked = selectedIds.includes(r.id);
+                  return (
+                    <tr
+                      key={r.id}
+                      className={`hover:bg-slate-50/80 transition-colors text-xs text-slate-700 ${
+                        isChecked ? "bg-indigo-50/40" : ""
+                      }`}
+                    >
+                      <td className="px-3.5 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleSelect(r.id)}
+                          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
+                        #{index + 1}
+                      </td>
+                      <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
+                        {r.primaryMemberName}
+                      </td>
+                      <td className="px-3.5 py-3 font-mono text-slate-600 whitespace-nowrap">
+                        {r.primaryMobileNumber}
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap max-w-[170px] truncate" title={r.membershipPlan}>
+                        {r.membershipPlan}
+                      </td>
+                      <td className="px-3.5 py-3 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          +{r.additionalMembers?.length || 0} Members
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-3 text-right font-semibold text-slate-900 whitespace-nowrap">
+                        ₹{r.monthlyFee}
+                      </td>
+                      <td className="px-3.5 py-3 text-right font-semibold text-emerald-600 whitespace-nowrap">
+                        ₹{r.amountPaid}
+                      </td>
+                      <td className="px-3.5 py-3 text-right font-semibold text-rose-600 whitespace-nowrap">
+                        ₹{r.dueAmount}
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <PaymentMethodBadge method={r.paymentMethod} />
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <PaymentBadge status={r.paymentStatus} />
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <StatusBadge status={r.status} />
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap text-slate-500">
+                        {r.joiningDate}
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap text-right sticky right-0 bg-white/95 backdrop-blur-xs">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setViewingMembership(r)}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="View Membership"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMembershipToEdit(r);
+                              setIsFormOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                            title="Edit Membership"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setSearchQuery("");
-              setSelectedMonth("All");
-              setPaymentMethodFilter("all");
-            }}
-            className="text-blue-600 hover:underline font-medium cursor-pointer"
-          >
-            Reset Filters
-          </button>
         </div>
       )}
-
-      {/* Membership Table & Mobile Cards */}
-      <MembershipTable
-        memberships={filteredMemberships}
-        onView={(record) => setViewingMembership(record)}
-        onEdit={(record) => {
-          setMembershipToEdit(record);
-          setIsFormOpen(true);
-        }}
-        onAddNew={() => {
-          setMembershipToEdit(null);
-          setIsFormOpen(true);
-        }}
-      />
 
       {/* View Drawer */}
       <MembershipDetailsDrawer
@@ -253,6 +446,7 @@ export function MembershipModule() {
         isOpen={Boolean(viewingMembership)}
         onClose={() => setViewingMembership(null)}
         onEdit={(record) => {
+          setViewingMembership(null);
           setMembershipToEdit(record);
           setIsFormOpen(true);
         }}
@@ -271,3 +465,4 @@ export function MembershipModule() {
     </div>
   );
 }
+export default MembershipModule;

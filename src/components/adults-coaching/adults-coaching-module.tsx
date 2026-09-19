@@ -10,6 +10,10 @@ import {
   Phone,
   Calendar,
   AlertCircle,
+  Trophy,
+  Clock,
+  DollarSign,
+  Award,
 } from "lucide-react";
 import {
   AdultCoachMember,
@@ -20,7 +24,8 @@ import { PaymentMethod } from "@/types/payment";
 import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { adultsService } from "@/services/excel";
-import { SearchBar } from "@/components/kids-coaching/search-bar";
+import { UniversalSearch } from "@/components/ui/universal-search";
+import { universalMatch } from "@/lib/search";
 import { MonthFilter } from "@/components/kids-coaching/month-filter";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
 import { PaymentBadge } from "@/components/kids-coaching/payment-badge";
@@ -28,13 +33,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { useBranch } from "@/context/branch-context";
+import { useAuth } from "@/context/auth-context";
+import { ExportDropdown } from "@/components/admin/common/export-dropdown";
+import { ExportColumn } from "@/utils/export-engine";
+
+const EXPORT_COLUMNS: ExportColumn<AdultCoachMember>[] = [
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
+  { header: "Member Name", key: "memberName" },
+  { header: "Mobile Number", key: "mobileNumber" },
+  { header: "Age", key: "age" },
+  { header: "Gender", key: "gender" },
+  { header: "Batch", key: "batch" },
+  { header: "Coach", key: "coach" },
+  { header: "Monthly Fee", key: "monthlyFee", formatter: (r) => `₹${r.monthlyFee}` },
+  { header: "Paid Amount", key: "paidAmount", formatter: (r) => `₹${r.paidAmount}` },
+  { header: "Due Amount", key: "dueAmount", formatter: (r) => `₹${r.dueAmount}` },
+  { header: "Payment Method", key: "paymentMethod" },
+  { header: "Payment Status", key: "paymentStatus" },
+  { header: "Month", key: "currentMonth", formatter: (r) => `${r.currentMonth} ${r.year}` },
+  { header: "Status", key: "status" },
+  { header: "Joining Date", key: "joiningDate" },
+];
 
 export function AdultsCoachingModule() {
-  const { currentBranch, employeeId, employeeName } = useBranch();
+  const { employeeId, employeeName } = useAuth();
   const [members, setMembers] = useState<AdultCoachMember[]>(() =>
     adultsService.getSnapshot()
   );
+
+  useEffect(() => {
+    const handleUpdate = () => setMembers(adultsService.getSnapshot());
+    window.addEventListener("excel-data-updated", handleUpdate);
+    return () => window.removeEventListener("excel-data-updated", handleUpdate);
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -99,21 +130,49 @@ export function AdultsCoachingModule() {
     setIsSubmitting(false);
   }, [memberToEdit, isFormOpen]);
 
-  // Search by Mobile Number + Branch Isolation
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   const filteredMembers = useMemo(() => {
     return members.filter((m) => {
-      if (m.branchId && m.branchId !== currentBranch.id) return false;
-      if (searchQuery.trim()) {
-        const cleanQuery = searchQuery.trim().replace(/\D/g, "");
-        const cleanPhone = m.mobileNumber.replace(/\D/g, "");
-        if (!cleanPhone.includes(cleanQuery)) return false;
-      }
+      if (searchQuery.trim() && !universalMatch(m, searchQuery)) return false;
       if (selectedMonth !== "All" && m.currentMonth !== selectedMonth) return false;
       if (m.year !== selectedYear) return false;
       if (paymentMethodFilter !== "all" && m.paymentMethod !== paymentMethodFilter) return false;
       return true;
     });
-  }, [members, currentBranch.id, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
+  }, [members, searchQuery, selectedMonth, selectedYear, paymentMethodFilter]);
+
+  const selectedMembers = useMemo(() => {
+    return members.filter((m) => selectedIds.includes(m.id));
+  }, [members, selectedIds]);
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const isAllCurrentSelected =
+    filteredMembers.length > 0 &&
+    filteredMembers.every((m) => selectedIds.includes(m.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllCurrentSelected) {
+      const cur = new Set(filteredMembers.map((m) => m.id));
+      setSelectedIds((prev) => prev.filter((id) => !cur.has(id)));
+    } else {
+      const cur = filteredMembers.map((m) => m.id);
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...cur])));
+    }
+  };
+
+  const metrics = useMemo(() => {
+    const total = filteredMembers.length;
+    const active = filteredMembers.filter((m) => m.status === "Active").length;
+    const paid = filteredMembers.filter((m) => m.paymentStatus === "Paid").length;
+    const totalDue = filteredMembers.reduce((sum, m) => sum + m.dueAmount, 0);
+    return { total, active, paid, totalDue };
+  }, [filteredMembers]);
 
   // Save / Edit Handler
   const handleSave = async (e: React.FormEvent) => {
@@ -207,8 +266,6 @@ export function AdultsCoachingModule() {
             remarks: remarks.trim(),
           },
           {
-            branchId: currentBranch.id,
-            branchName: currentBranch.name,
             employeeId,
             employeeName,
           }
@@ -232,39 +289,130 @@ export function AdultsCoachingModule() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Adults Coaching
             </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
-              📍 {currentBranch.name}
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <Trophy className="w-3.5 h-3.5" />
+              <span>{filteredMembers.length} Records</span>
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Manage adult coaching members at <span className="font-semibold text-slate-700">{currentBranch.name} Branch</span>.
+            Group coaching and competitive squad training.
           </p>
         </div>
-        <div className="flex items-center gap-3 text-xs">
-          <span className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-600 font-medium shadow-2xs">
-            Adult Members: <strong className="text-slate-900">{filteredMembers.length}</strong>
-          </span>
+
+        {/* Action Buttons: Export + Add Member */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <ExportDropdown
+            moduleName="Adults_Coaching"
+            moduleTitle="Adults Coaching Registry"
+            subtitle="Facility Registry"
+            columns={EXPORT_COLUMNS}
+            currentViewData={filteredMembers}
+            selectedData={selectedMembers}
+            entireModuleData={members}
+          />
+          <Button
+            onClick={() => {
+              setMemberToEdit(null);
+              setIsFormOpen(true);
+            }}
+            className="h-10 px-4 rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Adult Member</span>
+          </Button>
         </div>
       </div>
 
-      {/* Top Action Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
-        <div className="flex-1">
-          <SearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search by Mobile Number (e.g. 98881)..."
-          />
+      {/* 1. Standardized 4 KPI Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Players */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Total Players
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
+              {metrics.total}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Registered adult trainees
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6" />
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        {/* Active Squad */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Active Squad
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-blue-600 mt-1 block">
+              {metrics.active}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Regular batch players
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+            <Trophy className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Fees Settled */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Fees Settled
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-purple-600 mt-1 block">
+              {metrics.paid}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Fully paid accounts
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+            <DollarSign className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Pending Balance */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Pending Balance
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-rose-600 mt-1 block">
+              ₹{metrics.totalDue.toLocaleString()}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Outstanding dues
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+            <Clock className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Standardized Search & Filter Bar */}
+      <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <UniversalSearch
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search by name, ID, phone, or email..."
+        />
+        <div className="flex items-center gap-2.5 flex-wrap">
           <PaymentMethodFilter
             value={paymentMethodFilter}
             onChange={setPaymentMethodFilter}
@@ -275,89 +423,76 @@ export function AdultsCoachingModule() {
             selectedYear={selectedYear}
             onYearChange={setSelectedYear}
           />
-          <Button
-            onClick={() => {
-              setMemberToEdit(null);
-              setIsFormOpen(true);
-            }}
-            className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold h-10 px-4 rounded-xl shadow-xs shrink-0 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Adult Member</span>
-          </Button>
         </div>
       </div>
 
-      {/* Empty State */}
+      {/* 3. Interactive Data Table with Selection */}
       {filteredMembers.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-4">
-            <Users className="w-8 h-8 text-blue-500" />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900">No members found.</h3>
-          <p className="text-sm text-slate-500 max-w-sm mx-auto mt-1.5 mb-6">
-            No adult members match the selected filters.
-          </p>
-          <Button
-            onClick={() => {
-              setMemberToEdit(null);
-              setIsFormOpen(true);
-            }}
-            className="gap-2 bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Member</span>
-          </Button>
+          <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <h3 className="text-base font-bold text-slate-800">No adult members found</h3>
+          <p className="text-xs text-slate-500 mt-1">Adjust filters or register a new adult member.</p>
         </div>
       ) : (
-        <>
-          {/* Table View (16 columns) */}
-          <div className="hidden md:block rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-            <div className="overflow-x-auto max-h-[calc(100vh-280px)] scrollbar-thin">
-              <table className="w-full border-collapse text-left">
-                <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
-                  <tr>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Member Name</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Mobile Number</th>
-                    <th className="px-3.5 py-3 text-center whitespace-nowrap">Age</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Gender</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Joining Date</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Batch</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Coach</th>
-                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Monthly Fee</th>
-                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Paid Amount</th>
-                    <th className="px-3.5 py-3 text-right whitespace-nowrap">Due Amount</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Month</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
-                    <th className="px-3.5 py-3 whitespace-nowrap">Last Updated</th>
-                    <th className="px-3.5 py-3 text-right whitespace-nowrap sticky right-0 bg-slate-50 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.04)]">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white text-xs text-slate-700">
-                  {filteredMembers.map((m) => (
-                    <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
-                      <td className="px-3.5 py-3 font-mono font-medium text-slate-900 whitespace-nowrap">
-                        #{m.serialNumber}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+          <div className="overflow-x-auto max-h-[calc(100vh-320px)] scrollbar-thin">
+            <table className="w-full border-collapse text-left">
+              <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 shadow-xs">
+                <tr>
+                  <th className="px-3.5 py-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isAllCurrentSelected}
+                      onChange={handleToggleSelectAll}
+                      className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      title="Select All Records"
+                    />
+                  </th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Member Name</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Mobile Number</th>
+                  <th className="px-3.5 py-3 text-center whitespace-nowrap">Age/Gender</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Batch</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Coach</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Monthly Fee</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Paid</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap">Due</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Method</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Payment Status</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Month</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Status</th>
+                  <th className="px-3.5 py-3 text-right whitespace-nowrap sticky right-0 bg-slate-50">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200/80">
+                {filteredMembers.map((m, index) => {
+                  const isChecked = selectedIds.includes(m.id);
+                  return (
+                    <tr
+                      key={m.id}
+                      className={`hover:bg-slate-50/80 transition-colors text-xs text-slate-700 ${
+                        isChecked ? "bg-emerald-50/40" : ""
+                      }`}
+                    >
+                      <td className="px-3.5 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleSelect(m.id)}
+                          className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                        />
                       </td>
-                      <td className="px-3.5 py-3 font-semibold text-slate-900 whitespace-nowrap">
+                      <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
+                        #{index + 1}
+                      </td>
+                      <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {m.memberName}
                       </td>
                       <td className="px-3.5 py-3 font-mono text-slate-600 whitespace-nowrap">
                         {m.mobileNumber}
                       </td>
                       <td className="px-3.5 py-3 text-center whitespace-nowrap">
-                        {m.age}
-                      </td>
-                      <td className="px-3.5 py-3 whitespace-nowrap">
-                        {m.gender}
-                      </td>
-                      <td className="px-3.5 py-3 whitespace-nowrap text-slate-500">
-                        {m.joiningDate}
+                        {m.age} yrs • {m.gender}
                       </td>
                       <td className="px-3.5 py-3 max-w-[170px] truncate" title={m.batch}>
                         {m.batch}
@@ -386,15 +521,12 @@ export function AdultsCoachingModule() {
                       <td className="px-3.5 py-3 whitespace-nowrap">
                         <StatusBadge status={m.status} />
                       </td>
-                      <td className="px-3.5 py-3 whitespace-nowrap text-slate-400 text-[11px]">
-                        {new Date(m.updatedAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-3.5 py-3 whitespace-nowrap text-right sticky right-0 bg-white/95 backdrop-blur-xs shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.04)]">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="px-3.5 py-3 whitespace-nowrap text-right sticky right-0 bg-white/95 backdrop-blur-xs">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => setViewingMember(m)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
@@ -405,7 +537,7 @@ export function AdultsCoachingModule() {
                               setMemberToEdit(m);
                               setIsFormOpen(true);
                             }}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
                             title="Edit Record"
                           >
                             <Edit2 className="w-4 h-4" />
@@ -413,78 +545,12 @@ export function AdultsCoachingModule() {
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-
-          {/* Mobile Card Layout */}
-          <div className="md:hidden space-y-3.5">
-            {filteredMembers.map((m) => (
-              <Card key={m.id} className="border-slate-200/90 bg-white shadow-xs rounded-xl overflow-hidden">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 text-sm">{m.memberName}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">({m.age}y, {m.gender})</span>
-                      </div>
-                      <p className="text-xs text-slate-500 font-mono mt-0.5">#{m.serialNumber}</p>
-                    </div>
-                    <StatusBadge status={m.status} />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 pt-2 border-t border-slate-100">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="font-mono">{m.mobileNumber}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 truncate">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{m.currentMonth} {m.year}</span>
-                    </div>
-                    <div className="col-span-2 text-[11px] text-slate-500 truncate">
-                      <span className="font-medium text-slate-700">Coach:</span> {m.coach} &bull; {m.batch}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <PaymentBadge status={m.paymentStatus} />
-                      <span className="text-xs font-semibold text-slate-700">
-                        ₹{m.paidAmount} {m.dueAmount > 0 && <span className="text-rose-600 ml-1">Due: ₹{m.dueAmount}</span>}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setViewingMember(m)}
-                        className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      >
-                        <Eye className="w-3.5 h-3.5 mr-1" />
-                        View
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setMemberToEdit(m);
-                          setIsFormOpen(true);
-                        }}
-                        className="h-8 px-2 text-xs text-slate-700 hover:text-slate-900"
-                      >
-                        <Edit2 className="w-3.5 h-3.5 mr-1" />
-                        Edit
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </>
+        </div>
       )}
 
       {/* View Drawer */}

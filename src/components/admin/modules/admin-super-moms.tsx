@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Plus, Users, Heart, DollarSign, Eye, Edit2, X, AlertCircle } from "lucide-react";
-import { SuperMomsRecord } from "@/types/branch";
+import { SuperMomsRecord } from "@/types/coaching-modules";
 import { PaymentMethod, PaymentStatus } from "@/types/payment";
 import { superMomsService } from "@/services/excel";
-import { SearchBar } from "@/components/kids-coaching/search-bar";
+import { UniversalSearch } from "@/components/ui/universal-search";
+import { universalMatch } from "@/lib/search";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
 import { PaymentBadge } from "@/components/kids-coaching/payment-badge";
 import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
@@ -13,13 +14,8 @@ import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { ExportDropdown } from "@/components/admin/common/export-dropdown";
 import { ExportColumn } from "@/utils/export-engine";
-
-interface AdminSuperMomsProps {
-  selectedBranch: string; // "all" | "branch-nlg" | "branch-mnk"
-}
 
 const SUPER_MOMS_BATCHES = [
   "Morning Wellness Batch (09:00 AM - 10:30 AM)",
@@ -28,10 +24,9 @@ const SUPER_MOMS_BATCHES = [
 ];
 
 const EXPORT_COLUMNS: ExportColumn<SuperMomsRecord>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (r) => `#${r.serialNumber ?? ""}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
   { header: "Member Name", key: "memberName" },
   { header: "Mobile Number", key: "mobileNumber" },
-  { header: "Branch", key: "branchName", formatter: (r) => r.branchName || "Nallagandla" },
   { header: "Batch", key: "batch" },
   { header: "Coach", key: "coach" },
   { header: "Monthly Fee", key: "monthlyFee", formatter: (r) => `₹${r.monthlyFee}` },
@@ -42,10 +37,16 @@ const EXPORT_COLUMNS: ExportColumn<SuperMomsRecord>[] = [
   { header: "Joining Date", key: "joiningDate" },
 ];
 
-export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
+export function AdminSuperMoms() {
   const [records, setRecords] = useState<SuperMomsRecord[]>(() =>
     superMomsService.getSnapshot()
   );
+
+  useEffect(() => {
+    const handleUpdate = () => setRecords(superMomsService.getSnapshot());
+    window.addEventListener("excel-data-updated", handleUpdate);
+    return () => window.removeEventListener("excel-data-updated", handleUpdate);
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("All");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("All");
@@ -83,13 +84,8 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
 
   const filteredRecords = useMemo(() => {
     return records.filter((r) => {
-      if (selectedBranch !== "all" && r.branchId && r.branchId !== selectedBranch) {
+      if (searchQuery.trim() && !universalMatch(r, searchQuery)) {
         return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.trim().replace(/\D/g, "");
-        const cleanPhone = r.mobileNumber.replace(/\D/g, "");
-        if (!cleanPhone.includes(q)) return false;
       }
       if (selectedBatch !== "All" && r.batch !== selectedBatch) {
         return false;
@@ -99,7 +95,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
       }
       return true;
     });
-  }, [records, selectedBranch, searchQuery, selectedBatch, paymentMethodFilter]);
+  }, [records, searchQuery, selectedBatch, paymentMethodFilter]);
 
   const selectedRecords = useMemo(() => {
     return records.filter((r) => selectedIds.includes(r.id));
@@ -181,9 +177,6 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
       return;
     }
 
-    const targetBranchId = selectedBranch !== "all" ? selectedBranch : "branch-nlg";
-    const targetBranchName = targetBranchId === "branch-mnk" ? "Manikonda" : "Nallagandla";
-
     const fee = Number(formData.monthlyFee) || 0;
     const paid = Number(formData.amountPaid) || 0;
     const dueAmount = Math.max(0, fee - paid);
@@ -210,8 +203,6 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
         await superMomsService.create(
           payload,
           {
-            branchId: targetBranchId,
-            branchName: targetBranchName,
             employeeId: "ADM001",
             employeeName: "Super Admin",
           }
@@ -254,7 +245,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
           <ExportDropdown
             moduleName="Super_Moms"
             moduleTitle="Super Moms Badminton Registry"
-            subtitle={`Branch: ${selectedBranch === "all" ? "All Branches" : selectedBranch}`}
+            subtitle="Facility Registry"
             columns={EXPORT_COLUMNS}
             currentViewData={filteredRecords}
             selectedData={selectedRecords}
@@ -262,7 +253,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
           />
           <Button
             onClick={handleOpenAdd}
-            className="gap-2 bg-rose-600 hover:bg-rose-700 text-white shadow-xs cursor-pointer"
+            className="h-10 px-4 rounded-xl gap-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Super Mom</span>
@@ -270,63 +261,87 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
         </div>
       </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-              <Heart className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Total Moms</p>
-              <h3 className="text-xl font-bold text-slate-900">{metrics.total}</h3>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Moms */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Total Moms
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
+              {metrics.total}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Registered fitness members
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+            <Heart className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Active Players</p>
-              <h3 className="text-xl font-bold text-emerald-600">{metrics.active}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Active Players */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Active Players
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block">
+              {metrics.active}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Attending daytime sessions
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+            <Users className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-              <DollarSign className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Fees Settled</p>
-              <h3 className="text-xl font-bold text-purple-600">{metrics.paid}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Fees Settled */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Fees Settled
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-purple-600 mt-1 block">
+              {metrics.paid}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Up-to-date monthly subs
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+            <DollarSign className="w-6 h-6" />
+          </div>
+        </div>
 
-        <Card className="border-slate-200 shadow-xs">
-          <CardContent className="p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-              <DollarSign className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Pending Dues</p>
-              <h3 className="text-xl font-bold text-amber-600">₹{metrics.totalDue}</h3>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Pending Dues */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+              Pending Dues
+            </span>
+            <span className="text-2xl sm:text-3xl font-black text-amber-600 mt-1 block">
+              ₹{metrics.totalDue}
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Outstanding payments
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+            <DollarSign className="w-6 h-6" />
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <SearchBar
+        <UniversalSearch
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by mobile number..."
+          placeholder="Search by name, ID, phone, or email..."
         />
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="flex items-center gap-2">
@@ -374,7 +389,6 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                   <th className="px-3.5 py-3 whitespace-nowrap">Serial No</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mother Name</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mobile Number</th>
-                  <th className="px-3.5 py-3 whitespace-nowrap">Branch</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Batch</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Coach</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Monthly Fee</th>
@@ -387,7 +401,7 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/80">
-                {filteredRecords.map((r) => {
+                {filteredRecords.map((r, index) => {
                   const isChecked = selectedIds.includes(r.id);
                   return (
                     <tr
@@ -405,18 +419,13 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        #{r.serialNumber}
+                        #{index + 1}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {r.memberName}
                       </td>
                       <td className="px-3.5 py-3 font-mono text-slate-600 whitespace-nowrap">
                         {r.mobileNumber}
-                      </td>
-                      <td className="px-3.5 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                          {r.branchName || "Nallagandla"}
-                        </span>
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap max-w-[170px] truncate" title={r.batch}>
                         {r.batch}
@@ -501,7 +510,6 @@ export function AdminSuperMoms({ selectedBranch }: AdminSuperMomsProps) {
             <div className="flex-1 overflow-y-auto p-5 space-y-3 text-xs">
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                 <div className="flex justify-between"><span className="text-slate-500">Mobile:</span><span className="font-mono font-semibold text-slate-800">{viewingRecord.mobileNumber}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Branch:</span><span className="font-semibold text-slate-800">{viewingRecord.branchName || "Nallagandla"}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Batch:</span><span className="font-semibold text-slate-800">{viewingRecord.batch}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Coach:</span><span className="font-semibold text-slate-800">{viewingRecord.coach}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Monthly Fee:</span><span className="font-semibold text-slate-800">₹{viewingRecord.monthlyFee}</span></div>
