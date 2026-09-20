@@ -32,7 +32,7 @@ export const ADMIN_NAV_ITEMS: AdminNavigationItem[] = [
   },
   {
     id: "pro-bd-shop",
-    label: "PRO BD Shop",
+    label: "PBA Store",
     icon: ShoppingBag,
   },
   {
@@ -72,7 +72,7 @@ export const ADMIN_NAV_ITEMS: AdminNavigationItem[] = [
   },
   {
     id: "flexible-membership",
-    label: "Flexible Membership",
+    label: "Flexible",
     icon: Timer,
   },
   {

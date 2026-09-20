@@ -13,6 +13,8 @@ import {
   MembershipRecord,
   LinkedMember,
   MEMBERSHIP_PLANS,
+  COURT_NUMBERS,
+  MEMBERSHIP_TIMINGS,
 } from "@/types/membership";
 import { MONTHS, StudentStatus } from "@/types/kids-coaching";
 import { PaymentMethod } from "@/types/payment";
@@ -51,6 +53,8 @@ export function MembershipFormModal({
   const [currentMonth, setCurrentMonth] = useState<string>("March");
   const [status, setStatus] = useState<StudentStatus>("Active");
   const [remarks, setRemarks] = useState("");
+  const [timing, setTiming] = useState<string>(MEMBERSHIP_TIMINGS[0]);
+  const [courtNumber, setCourtNumber] = useState<string>(COURT_NUMBERS[0]);
 
   // Additional Members (Section 2)
   const [additionalMembers, setAdditionalMembers] = useState<LinkedMember[]>([]);
@@ -74,6 +78,8 @@ export function MembershipFormModal({
       setCurrentMonth(membershipToEdit.currentMonth);
       setStatus(membershipToEdit.status);
       setRemarks(membershipToEdit.remarks || "");
+      setTiming(membershipToEdit.timing || MEMBERSHIP_TIMINGS[0]);
+      setCourtNumber(membershipToEdit.courtNumber || COURT_NUMBERS[0]);
       setAdditionalMembers(membershipToEdit.additionalMembers || []);
     } else {
       setPrimaryMemberName("");
@@ -89,6 +95,8 @@ export function MembershipFormModal({
       setCurrentMonth("March");
       setStatus("Active");
       setRemarks("");
+      setTiming(MEMBERSHIP_TIMINGS[0]);
+      setCourtNumber(COURT_NUMBERS[0]);
       setAdditionalMembers([]);
     }
     setErrors({});
@@ -198,6 +206,8 @@ export function MembershipFormModal({
       status,
       currentMonth,
       remarks: remarks.trim() || undefined,
+      timing: timing.trim() || undefined,
+      courtNumber,
       additionalMembers: additionalMembers.map((m) => ({
         ...m,
         individualContribution: Number(m.individualContribution) || 0,
@@ -475,6 +485,47 @@ export function MembershipFormModal({
                   onChange={(e) => setRemarks(e.target.value)}
                   placeholder="Family notes, court access privileges..."
                 />
+              </div>
+
+              {/* Session Timing */}
+              <div>
+                <Label htmlFor="priTiming" required>
+                  Session Timing
+                </Label>
+                <select
+                  id="priTiming"
+                  value={timing}
+                  onChange={(e) => setTiming(e.target.value)}
+                  className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-800"
+                >
+                  {MEMBERSHIP_TIMINGS.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                  {timing && !MEMBERSHIP_TIMINGS.includes(timing as any) && (
+                    <option value={timing}>{timing} (Custom)</option>
+                  )}
+                </select>
+              </div>
+
+              {/* Court Number (1 to 7) */}
+              <div>
+                <Label htmlFor="priCourt" required>
+                  Assigned Court (Courts 1–7)
+                </Label>
+                <select
+                  id="priCourt"
+                  value={courtNumber}
+                  onChange={(e) => setCourtNumber(e.target.value)}
+                  className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 font-semibold text-blue-700"
+                >
+                  {COURT_NUMBERS.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

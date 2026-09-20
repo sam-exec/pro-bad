@@ -42,7 +42,7 @@ import { ExportDropdown } from "@/components/admin/common/export-dropdown";
 import { ExportColumn } from "@/utils/export-engine";
 
 const EXPORT_COLUMNS: ExportColumn<Kids1on1Student>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `${idx + 1}` },
   { header: "Student Name", key: "studentName" },
   { header: "Parent Name", key: "parentName" },
   { header: "Mobile", key: "parentMobile" },
@@ -147,7 +147,13 @@ export function KidsCoaching1on1Module() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const filteredStudents = useMemo(() => {
+    const seenIds = new Set<string>();
     return students.filter((s) => {
+      if (seenIds.has(s.id)) {
+        return false;
+      }
+      seenIds.add(s.id);
+
       if (searchQuery.trim() && !universalMatch(s, searchQuery)) {
         return false;
       }
@@ -300,7 +306,7 @@ export function KidsCoaching1on1Module() {
             employeeName,
           }
         );
-        setStudents((prev) => [created, ...prev]);
+        setStudents(kidsService.getSnapshot1on1());
       }
 
       setIsFormOpen(false);

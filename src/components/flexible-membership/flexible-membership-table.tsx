@@ -78,7 +78,7 @@ export function FlexibleMembershipTable({
                   <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
                     {/* Serial Number */}
                     <td className="px-3.5 py-3 font-mono font-medium text-slate-900 whitespace-nowrap">
-                      #{index + 1}
+                      {index + 1}
                     </td>
 
                     {/* Primary Name */}
@@ -216,7 +216,7 @@ export function FlexibleMembershipTable({
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 font-mono mt-0.5">
-                      #{index + 1}
+                      {index + 1}
                     </p>
                   </div>
                   <FlexibleStatusBadge status={m.status} />

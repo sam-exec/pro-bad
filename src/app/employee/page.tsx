@@ -16,7 +16,7 @@ export default function EmployeeDashboardPage() {
   const activeItem = DASHBOARD_NAV_ITEMS.find(
     (item) => item.id === currentModule || (item.id === "pro-bd-shop" && currentModule === "sales")
   );
-  const currentTitle = activeItem ? activeItem.label : "PRO BD Shop";
+  const currentTitle = activeItem ? activeItem.label : "PBA Store";
 
   return (
     <div className="h-screen w-full flex overflow-hidden bg-slate-50 antialiased">

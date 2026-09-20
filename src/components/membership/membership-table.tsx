@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, Edit2, Users, Plus, Phone, Calendar, UserCheck } from "lucide-react";
+import { Eye, Edit2, Users, Plus, Phone, Calendar, UserCheck, LayoutGrid } from "lucide-react";
 import { MembershipRecord } from "@/types/membership";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
 import { PaymentBadge } from "@/components/kids-coaching/payment-badge";
@@ -50,6 +50,7 @@ export function MembershipTable({
                 <th className="px-3.5 py-3 whitespace-nowrap">Primary Member Name</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Primary Mobile</th>
                 <th className="px-3.5 py-3 whitespace-nowrap">Membership Plan</th>
+                <th className="px-3.5 py-3 whitespace-nowrap">Court &amp; Timing</th>
                 <th className="px-3.5 py-3 text-center whitespace-nowrap">Total Members</th>
                 <th className="px-3.5 py-3 text-right whitespace-nowrap">Monthly Fee</th>
                 <th className="px-3.5 py-3 text-right whitespace-nowrap">Amount Paid</th>
@@ -74,7 +75,7 @@ export function MembershipTable({
                   <tr key={m.id} className="hover:bg-blue-50/40 transition-colors">
                     {/* Serial Number */}
                     <td className="px-3.5 py-3 font-mono font-medium text-slate-900 whitespace-nowrap">
-                      #{index + 1}
+                      {index + 1}
                     </td>
 
                     {/* Primary Member Name */}
@@ -93,6 +94,19 @@ export function MembershipTable({
                       title={m.membershipPlan}
                     >
                       {m.membershipPlan}
+                    </td>
+
+                    {/* Court & Timing */}
+                    <td className="px-3.5 py-3 whitespace-nowrap">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/80 w-fit">
+                          <LayoutGrid className="w-3 h-3 text-blue-600" />
+                          {m.courtNumber || "Court 1"}
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-mono">
+                          {m.timing || "06:00 AM - 07:00 AM"}
+                        </span>
+                      </div>
                     </td>
 
                     {/* Total Members */}
@@ -210,7 +224,7 @@ export function MembershipTable({
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 font-mono mt-0.5">
-                      #{index + 1} &bull; {m.membershipPlan}
+                      {index + 1} &bull; {m.membershipPlan} &bull; {m.courtNumber || "Court 1"} ({m.timing || "06:00 AM - 07:00 AM"})
                     </p>
                   </div>
                   <StatusBadge status={m.status} />

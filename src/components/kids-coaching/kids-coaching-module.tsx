@@ -20,7 +20,7 @@ import { ExportColumn } from "@/utils/export-engine";
 import { useAuth } from "@/context/auth-context";
 
 const EXPORT_COLUMNS: ExportColumn<Student>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `${idx + 1}` },
   { header: "Student Name", key: "studentName" },
   { header: "Parent Name", key: "parentName" },
   { header: "Mobile Number", key: "mobileNumber" },
@@ -211,80 +211,7 @@ export function KidsCoachingModule() {
         </div>
       </div>
 
-      {/* 1. Standardized 4 KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Students */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-              Total Students
-            </span>
-            <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
-              {metrics.total}
-            </span>
-            <span className="text-xs text-slate-400 font-medium">
-              Filtered coaching roster
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-            <Users className="w-6 h-6" />
-          </div>
-        </div>
 
-        {/* Active Enrolled */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-              Active Enrolled
-            </span>
-            <span className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block">
-              {metrics.activeCount}
-            </span>
-            <span className="text-xs text-slate-400 font-medium">
-              Regular batch attendees
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-            <Award className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Fees Settled */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-              Fees Settled
-            </span>
-            <span className="text-2xl sm:text-3xl font-black text-purple-600 mt-1 block">
-              {metrics.paidCount}
-            </span>
-            <span className="text-xs text-slate-400 font-medium">
-              No outstanding balance
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-            <DollarSign className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Outstanding Dues */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-              Outstanding Dues
-            </span>
-            <span className="text-2xl sm:text-3xl font-black text-rose-600 mt-1 block">
-              ₹{metrics.totalDue.toLocaleString()}
-            </span>
-            <span className="text-xs text-slate-400 font-medium">
-              Pending fee recovery
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-            <Clock className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
 
       {/* 2. Standardized Search & Filter Bar */}
       <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">

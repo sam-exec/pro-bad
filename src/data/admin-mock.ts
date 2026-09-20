@@ -177,7 +177,7 @@ export const INITIAL_AUDIT_LOGS: AdminAuditLog[] = [
     employeeId: "EMP007",
     employeeName: "Ananya Iyer",
     action: "Created court reservation for Court 1 (INV-2026-0003)",
-    module: "PRO BD Shop",
+    module: "PBA Store",
     timestamp: "2026-03-04 07:45 AM",
     details: "Customer: Deepak Chawla, Cash payment ₹30",
   },

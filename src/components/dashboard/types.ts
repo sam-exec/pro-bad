@@ -22,7 +22,7 @@ export interface NavigationItem {
 export const DASHBOARD_NAV_ITEMS: NavigationItem[] = [
   {
     id: "pro-bd-shop",
-    label: "PRO BD Shop",
+    label: "PBA Store",
     icon: ShoppingBag,
   },
   {
@@ -62,7 +62,7 @@ export const DASHBOARD_NAV_ITEMS: NavigationItem[] = [
   },
   {
     id: "flexible-membership",
-    label: "Flexible Membership",
+    label: "Flexible",
     icon: CalendarClock,
   },
   {

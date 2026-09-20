@@ -50,7 +50,7 @@ export function StudentDetailsDrawer({
                 <StatusBadge status={student.status} />
               </div>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
-                {serialNumber !== undefined ? `#${serialNumber}` : student.studentId || "—"}
+                {serialNumber !== undefined ? `${serialNumber}` : student.studentId || "—"}
               </p>
             </div>
           </div>
@@ -77,7 +77,7 @@ export function StudentDetailsDrawer({
               <div>
                 <span className="text-slate-400 font-medium">Serial Number</span>
                 <p className="font-semibold text-slate-800 font-mono mt-0.5">
-                  {serialNumber !== undefined ? `#${serialNumber}` : "—"}
+                  {serialNumber !== undefined ? `${serialNumber}` : "—"}
                 </p>
               </div>
               <div>

@@ -13,6 +13,7 @@ import {
   Clock,
   Edit2,
   BadgeDollarSign,
+  LayoutGrid,
 } from "lucide-react";
 import { MembershipRecord } from "@/types/membership";
 import { StatusBadge } from "@/components/kids-coaching/status-badge";
@@ -55,14 +56,18 @@ export function MembershipDetailsDrawer({
               {membership.primaryMemberName.charAt(0)}
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-lg font-bold text-slate-900 leading-tight">
                   {membership.primaryMemberName}
                 </h2>
                 <StatusBadge status={membership.status} />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                  <LayoutGrid className="w-3 h-3" />
+                  {membership.courtNumber || "Court 1"}
+                </span>
               </div>
               <p className="text-xs text-slate-400 font-mono mt-0.5">
-                Serial No: #{membership.serialNumber} &bull; {totalMembers} {totalMembers === 1 ? "Member" : "Members"}
+                Serial No: {membership.serialNumber} &bull; {totalMembers} {totalMembers === 1 ? "Member" : "Members"}
               </p>
             </div>
           </div>
@@ -132,7 +137,34 @@ export function MembershipDetailsDrawer({
             </div>
           </div>
 
-          {/* Section 2: Financial Details */}
+          {/* Section 1b: Court & Timing */}
+          <div className="space-y-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <LayoutGrid className="w-3.5 h-3.5 text-blue-600" />
+              <span>Assigned Court &amp; Session Timing (7 Courts)</span>
+            </span>
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-white rounded-lg border border-slate-200/80">
+                  <span className="text-slate-400 block text-[11px] font-medium">Assigned Court</span>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="font-bold text-blue-700 text-sm">
+                      {membership.courtNumber || "Court 1"}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      (PBA Academy)
+                    </span>
+                  </div>
+                </div>
+                <div className="p-3 bg-white rounded-lg border border-slate-200/80">
+                  <span className="text-slate-400 block text-[11px] font-medium">Session Timing</span>
+                  <p className="font-semibold text-slate-800 text-sm mt-1">
+                    {membership.timing || "06:00 AM - 07:00 AM"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="space-y-3">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <CreditCard className="w-3.5 h-3.5 text-blue-600" />

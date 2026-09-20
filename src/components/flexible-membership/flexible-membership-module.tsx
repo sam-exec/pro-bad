@@ -23,7 +23,7 @@ import { ExportColumn } from "@/utils/export-engine";
 import { useAuth } from "@/context/auth-context";
 
 const EXPORT_COLUMNS: ExportColumn<FlexibleMembershipRecord>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `${idx + 1}` },
   { header: "Primary Member", key: "primaryMemberName" },
   { header: "Mobile Number", key: "primaryMobileNumber" },
   { header: "Email", key: "email" },
@@ -61,7 +61,13 @@ export function FlexibleMembershipModule() {
 
   // Filtering Logic
   const filteredRecords = useMemo(() => {
+    const seenIds = new Set<string>();
     return memberships.filter((r) => {
+      if (seenIds.has(r.id)) {
+        return false;
+      }
+      seenIds.add(r.id);
+
       if (searchQuery.trim() && !universalMatch(r, searchQuery)) {
         return false;
       }
@@ -160,7 +166,7 @@ export function FlexibleMembershipModule() {
         }
       );
 
-      setMemberships((prev) => [created, ...prev]);
+      setMemberships(membershipService.getSnapshotFlexible());
     }
     setIsFormOpen(false);
     setRecordToEdit(null);
@@ -365,7 +371,7 @@ export function FlexibleMembershipModule() {
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        #{index + 1}
+                        {index + 1}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {r.primaryMemberName}

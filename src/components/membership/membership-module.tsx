@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Plus, Users, CreditCard, DollarSign, Eye, Edit2 } from "lucide-react";
+import { Plus, Users, CreditCard, DollarSign, Eye, Edit2, LayoutGrid } from "lucide-react";
 import { MembershipRecord } from "@/types/membership";
 import { PaymentMethod } from "@/types/payment";
 import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
@@ -20,11 +20,13 @@ import { ExportColumn } from "@/utils/export-engine";
 import { useAuth } from "@/context/auth-context";
 
 const EXPORT_COLUMNS: ExportColumn<MembershipRecord>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `${idx + 1}` },
   { header: "Primary Member", key: "primaryMemberName" },
   { header: "Mobile", key: "primaryMobileNumber" },
   { header: "Email", key: "email" },
   { header: "Plan", key: "membershipPlan" },
+  { header: "Court", key: "courtNumber", formatter: (r) => r.courtNumber || "Court 1" },
+  { header: "Timing", key: "timing", formatter: (r) => r.timing || "06:00 AM - 07:00 AM" },
   {
     header: "Additional Members",
     key: "additionalMembers",
@@ -65,7 +67,13 @@ export function MembershipModule() {
 
   // Filter logic: Search by Primary Mobile + Month/Year + Payment Method
   const filteredMemberships = useMemo(() => {
+    const seenIds = new Set<string>();
     return memberships.filter((m) => {
+      if (seenIds.has(m.id)) {
+        return false;
+      }
+      seenIds.add(m.id);
+
       // Universal Search
       if (searchQuery.trim() && !universalMatch(m, searchQuery)) {
         return false;
@@ -138,15 +146,13 @@ export function MembershipModule() {
         employeeId
       );
 
-      setMemberships((prev) =>
-        prev.map((item) => (item.id === idToEdit ? updated : item))
-      );
+      setMemberships(membershipService.getSnapshot());
 
       if (viewingMembership?.id === idToEdit) {
         setViewingMembership(updated);
       }
     } else {
-      const created = await membershipService.create(
+      await membershipService.create(
         {
           primaryMemberName: data.primaryMemberName || "",
           primaryMobileNumber: data.primaryMobileNumber || "",
@@ -162,6 +168,8 @@ export function MembershipModule() {
           paymentMethod: data.paymentMethod || "UPI",
           status: data.status || "Active",
           remarks: data.remarks,
+          timing: data.timing,
+          courtNumber: data.courtNumber,
           currentMonth: data.currentMonth || "March",
           year: 2026,
           additionalMembers: data.additionalMembers || [],
@@ -172,7 +180,7 @@ export function MembershipModule() {
         }
       );
 
-      setMemberships((prev) => [created, ...prev]);
+      setMemberships(membershipService.getSnapshot());
     }
     setIsFormOpen(false);
     setMembershipToEdit(null);
@@ -341,6 +349,7 @@ export function MembershipModule() {
                   <th className="px-3.5 py-3 whitespace-nowrap">Primary Member</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Mobile</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Plan Details</th>
+                  <th className="px-3.5 py-3 whitespace-nowrap">Court &amp; Timing</th>
                   <th className="px-3.5 py-3 whitespace-nowrap">Additional Members</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Fee</th>
                   <th className="px-3.5 py-3 text-right whitespace-nowrap">Paid</th>
@@ -371,7 +380,7 @@ export function MembershipModule() {
                         />
                       </td>
                       <td className="px-3.5 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
-                        #{index + 1}
+                        {index + 1}
                       </td>
                       <td className="px-3.5 py-3 font-medium text-slate-900 whitespace-nowrap">
                         {r.primaryMemberName}
@@ -381,6 +390,17 @@ export function MembershipModule() {
                       </td>
                       <td className="px-3.5 py-3 whitespace-nowrap max-w-[170px] truncate" title={r.membershipPlan}>
                         {r.membershipPlan}
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/80 w-fit">
+                            <LayoutGrid className="w-3 h-3 text-blue-600" />
+                            {r.courtNumber || "Court 1"}
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-mono">
+                            {r.timing || "06:00 AM - 07:00 AM"}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-3.5 py-3 text-center whitespace-nowrap">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">

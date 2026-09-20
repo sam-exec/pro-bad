@@ -48,7 +48,7 @@ export function Header({ title, onOpenMobileNav }: HeaderProps) {
             </span>
           </div>
           <h1 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
-            {title === "Dashboard" || title === "Sales" ? "PRO BD Shop" : title}
+            {title === "Dashboard" || title === "Sales" ? "PBA Store" : title}
           </h1>
         </div>
       </div>

@@ -20,7 +20,7 @@ import { ExportColumn } from "@/utils/export-engine";
 import { Eye, Edit2 } from "lucide-react";
 
 const EXPORT_COLUMNS: ExportColumn<Student>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `${idx + 1}` },
   { header: "Student Name", key: "studentName" },
   { header: "Parent Name", key: "parentName" },
   { header: "Mobile Number", key: "mobileNumber" },

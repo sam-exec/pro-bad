@@ -122,26 +122,41 @@ class ExcelService {
    * Reads all rows from a designated workbook worksheet.
    * In future: reads from .xlsx file on server / S3 or PostgreSQL table.
    */
-  async readWorksheet<T extends ExcelRecordMeta>(
+  async readWorksheet<T extends ExcelRecordMeta & { id?: string }>(
     workbook: string,
     worksheet: string
   ): Promise<T[]> {
     const key = this.getSheetKey(workbook, worksheet);
     const rows = (this.store.get(key) || []) as T[];
-    // Clone to prevent direct external mutation
-    return rows.map((r) => ({ ...r }));
+    const seen = new Set<string>();
+    const deduplicated: T[] = [];
+    for (const r of rows) {
+      const identifier = r.id || r.recordId;
+      if (identifier && seen.has(identifier)) continue;
+      if (identifier) seen.add(identifier);
+      deduplicated.push({ ...r });
+    }
+    return deduplicated;
   }
 
   /**
    * Synchronous snapshot accessor for immediate initial UI rendering
    */
-  getWorksheetSnapshot<T extends ExcelRecordMeta>(
+  getWorksheetSnapshot<T extends ExcelRecordMeta & { id?: string }>(
     workbook: string,
     worksheet: string
   ): T[] {
     const key = this.getSheetKey(workbook, worksheet);
     const rows = (this.store.get(key) || []) as T[];
-    return rows.map((r) => ({ ...r }));
+    const seen = new Set<string>();
+    const deduplicated: T[] = [];
+    for (const r of rows) {
+      const identifier = r.id || r.recordId;
+      if (identifier && seen.has(identifier)) continue;
+      if (identifier) seen.add(identifier);
+      deduplicated.push({ ...r });
+    }
+    return deduplicated;
   }
 
   /**
@@ -154,16 +169,14 @@ class ExcelService {
   ): Promise<T | null> {
     const key = this.getSheetKey(workbook, worksheet);
     const rows = (this.store.get(key) || []) as T[];
-    const found = rows.find(
-      (r: any) => r.recordId === id || r.id === id
-    );
+    const found = rows.find((r) => r.recordId === id || (r as any).id === id);
     return found ? { ...found } : null;
   }
 
   /**
-   * Writes a new record to the designated workbook and worksheet.
-   * Enforces all hidden metadata fields (recordId, timestamps, audit info).
-   * In future: appends row to Excel file or executes INSERT query.
+   * Writes/appends a new record to the designated workbook and worksheet.
+   * Auto-assigns permanent recordId, timestamps, and audit actor.
+   * In future: appends row to Excel file via exceljs/xlsx.
    */
   async writeRecord<T extends ExcelRecordMeta & { id?: string }>(
     workbook: string,
@@ -171,10 +184,9 @@ class ExcelService {
     record: T
   ): Promise<T> {
     const key = this.getSheetKey(workbook, worksheet);
-    const rows = this.store.get(key) || [];
-    
-    const timestamp = new Date().toISOString();
+    const rows = (this.store.get(key) || []) as T[];
     const finalRecordId = record.recordId || record.id || `rec-${crypto.randomUUID()}`;
+    const timestamp = new Date().toISOString();
 
     const completeRecord: T = {
       ...record,
@@ -185,7 +197,10 @@ class ExcelService {
       lastModifiedBy: record.lastModifiedBy || record.employeeId,
     };
 
-    const nextRows = [...rows, completeRecord];
+    const existingFiltered = rows.filter(
+      (r) => (r.id || r.recordId) !== (completeRecord.id || completeRecord.recordId)
+    );
+    const nextRows = [...existingFiltered, completeRecord];
     this.store.set(key, nextRows);
 
     // [Future Excel Hook]:

@@ -20,7 +20,7 @@ import { ExportDropdown } from "@/components/admin/common/export-dropdown";
 import { ExportColumn } from "@/utils/export-engine";
 
 const EXPORT_COLUMNS: ExportColumn<Adult1on1Member>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `${idx + 1}` },
   { header: "Member Name", key: "memberName" },
   { header: "Mobile", key: "mobileNumber" },
   { header: "Age", key: "age" },

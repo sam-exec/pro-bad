@@ -35,6 +35,7 @@ import { PaymentMethodBadge } from "@/components/common/payment-method-badge";
 import { PaymentMethodFilter } from "@/components/common/payment-method-filter";
 import { UniversalSearch } from "@/components/ui/universal-search";
 
+
 interface LineItemFormState {
   id: string;
   product: string;
@@ -64,29 +65,28 @@ export function EmployeeSalesModule() {
     };
   }, []);
 
-  // Available products from inventory
-  const inventoryItems = useMemo(() => {
-    return inventoryService.getInventory();
-  }, [updateTrigger]);
-
-  const availableProducts = useMemo(() => {
-    if (inventoryItems.length > 0) {
-      return inventoryItems.map((i) => ({
-        name: i.productName,
-        price: i.sellingPrice,
-        currentStock: i.currentStock,
-        sku: i.sku,
-        status: i.status,
-      }));
+  // Custom product names added by employees — persisted in localStorage
+  const CUSTOM_PRODUCTS_KEY = "pba_custom_sale_products";
+  const [customProductNames, setCustomProductNames] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem(CUSTOM_PRODUCTS_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
     }
-    return SALES_PRODUCT_LIST.map((prod) => ({
-      name: prod,
-      price: 0,
-      currentStock: 10,
-      sku: "",
-      status: "In Stock" as const,
-    }));
-  }, [inventoryItems]);
+  });
+
+  // Canonical product list: fixed 28 categories + any custom names added by employees
+  // NOTE: deliberately does NOT read from inventoryService — inventory holds stock/pricing
+  // data for the Inventory module; the sale form uses category-level names only.
+  const availableProducts = useMemo(() => {
+    const base = [...SALES_PRODUCT_LIST] as string[];
+    const merged = [...base];
+    customProductNames.forEach((name) => {
+      if (!merged.includes(name)) merged.push(name);
+    });
+    return merged.map((name) => ({ name, price: 0, currentStock: 0 }));
+  }, [customProductNames]);
 
   // Record Form States
   const [customerName, setCustomerName] = useState("");
@@ -105,6 +105,41 @@ export function EmployeeSalesModule() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | null>(null);
+
+  // Inline "Add product name" quick-entry dialog
+  const [isAddNameModalOpen, setIsAddNameModalOpen] = useState(false);
+  const [pendingAddProductIndex, setPendingAddProductIndex] = useState<number | null>(null);
+  const [addProductNameInput, setAddProductNameInput] = useState("");
+
+  const handleConfirmAddProductName = () => {
+    const trimmed = addProductNameInput.trim().toUpperCase();
+    if (!trimmed) return;
+    const allNames = [...SALES_PRODUCT_LIST as unknown as string[], ...customProductNames];
+    let updated = customProductNames;
+    if (!allNames.includes(trimmed)) {
+      // Persist to localStorage so it's available in every future session
+      updated = [...customProductNames, trimmed];
+      setCustomProductNames(updated);
+      try {
+        localStorage.setItem(CUSTOM_PRODUCTS_KEY, JSON.stringify(updated));
+      } catch { /* ignore */ }
+    }
+    // Select the new (or existing) product in the line item that triggered the action
+    if (pendingAddProductIndex !== null) {
+      setItems((prev) => {
+        const next = [...prev];
+        next[pendingAddProductIndex] = {
+          ...next[pendingAddProductIndex],
+          product: trimmed,
+          unitPrice: "",
+        };
+        return next;
+      });
+    }
+    setAddProductNameInput("");
+    setPendingAddProductIndex(null);
+    setIsAddNameModalOpen(false);
+  };
 
   // History Filter States
   const [historySearch, setHistorySearch] = useState("");
@@ -158,6 +193,13 @@ export function EmployeeSalesModule() {
     field: keyof LineItemFormState,
     value: any
   ) => {
+    // Intercept the sentinel value — open inline name-entry dialog
+    if (field === "product" && value === "__ADD_PRODUCT__") {
+      setPendingAddProductIndex(index);
+      setAddProductNameInput("");
+      setIsAddNameModalOpen(true);
+      return;
+    }
     setItems((prev) => {
       const next = [...prev];
       if (field === "product") {
@@ -165,7 +207,8 @@ export function EmployeeSalesModule() {
         next[index] = {
           ...next[index],
           product: value,
-          unitPrice: found ? found.price : next[index].unitPrice,
+          // Price is always entered manually for category-level products
+          unitPrice: "",
         };
       } else {
         next[index] = { ...next[index], [field]: value };
@@ -194,6 +237,15 @@ export function EmployeeSalesModule() {
     }
     if (items.some((i) => i.unitPrice === "" || Number(i.unitPrice) < 0 || isNaN(Number(i.unitPrice)))) {
       setErrorMessage("Unit Price cannot be negative.");
+      return;
+    }
+
+    // Price guard — block silent ₹0 checkout
+    const zeroPriceItem = items.find((i) => i.unitPrice === "" || Number(i.unitPrice) === 0);
+    if (zeroPriceItem) {
+      setErrorMessage(
+        `Price for "${zeroPriceItem.product}" is not set. Please enter a unit price before completing the sale.`
+      );
       return;
     }
 
@@ -446,7 +498,7 @@ export function EmployeeSalesModule() {
     `;
 
     salesManagementService.exportToPDF(
-      "Employee PRO BD Shop Report",
+      "Employee PBA Store Report",
       `Employee: ${employeeName}`,
       htmlContent
     );
@@ -459,11 +511,11 @@ export function EmployeeSalesModule() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              PRO BD Shop Management &amp; Invoicing
+              PBA Store Management &amp; Invoicing
             </h1>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
               <ShoppingBag className="w-3.5 h-3.5" />
-              <span>PRO BD Shop</span>
+              <span>PBA Store</span>
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
@@ -647,7 +699,7 @@ export function EmployeeSalesModule() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-                      {/* Product Dropdown (from inventory) */}
+                      {/* Product Dropdown (from inventory or category list) */}
                       <div className="sm:col-span-4">
                         <label className="block text-[11px] font-bold text-slate-600 mb-1">
                           Product *
@@ -659,31 +711,47 @@ export function EmployeeSalesModule() {
                           }
                           className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                         >
-                          {availableProducts.map((prod) => (
-                            <option key={prod.name} value={prod.name}>
-                              {prod.name} (Stock: {prod.currentStock}) - ₹{prod.price}
-                            </option>
-                          ))}
+                          {availableProducts.map((prod) => {
+                            const hasPrice = prod.price > 0;
+                            const label = hasPrice
+                              ? `${prod.name}  ·  ₹${prod.price}  (Stock: ${prod.currentStock})`
+                              : prod.name;
+                            return (
+                              <option key={prod.name} value={prod.name}>
+                                {label}
+                              </option>
+                            );
+                          })}
+                          {/* Divider */}
+                          <option disabled value="">──────────────</option>
+                          {/* Quick action — intercepted in handleItemChange */}
+                          <option value="__ADD_PRODUCT__">➕ Add product</option>
                         </select>
                         {(() => {
                           const stockItem = availableProducts.find((p) => p.name === item.product);
-                          const stock = stockItem ? stockItem.currentStock : 0;
+                          if (!stockItem) return null;
+                          const stock = stockItem.currentStock;
+                          const hasPrice = stockItem.price > 0;
                           const isOverdraft = Number(item.quantity) > stock;
                           return (
                             <div className="flex items-center justify-between text-[10px] mt-1 px-0.5">
                               <span
                                 className={cn(
                                   "font-semibold",
-                                  stock > 5
+                                  !hasPrice
+                                    ? "text-amber-600"
+                                    : stock > 5
                                     ? "text-emerald-700"
                                     : stock > 0
                                     ? "text-amber-700"
                                     : "text-rose-600"
                                 )}
                               >
-                                Stock: {stock} units {stock <= 0 && "(Out of Stock)"}
+                                {!hasPrice
+                                  ? "Price not set — enter manually"
+                                  : `Stock: ${stock} units${stock <= 0 ? " (Out of Stock)" : ""}`}
                               </span>
-                              {isOverdraft && (
+                              {hasPrice && isOverdraft && (
                                 <span className="text-rose-600 font-bold">
                                   Exceeds stock!
                                 </span>
@@ -970,13 +1038,13 @@ export function EmployeeSalesModule() {
           </div>
         </div>
 
-        {/* 4. PRO BD SHOP REPORTS & EXPORT */}
+        {/* 4. PBA Store REPORTS & EXPORT */}
         <div className="space-y-6 pt-2">
           {/* Controls & Export Buttons */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                PRO BD Shop Reports for {employeeName}
+                PBA Store Reports for {employeeName}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 Generate and export detailed shop statements and product breakdowns.
@@ -1130,6 +1198,50 @@ export function EmployeeSalesModule() {
                 className="px-4 py-2 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-700 text-white transition-colors shadow-xs cursor-pointer"
               >
                 Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INLINE ADD PRODUCT NAME DIALOG — lightweight, just captures a product name */}
+      {isAddNameModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-11 h-11 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center mb-3">
+              <Plus className="w-5 h-5" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mb-1">Add Product to Catalog</h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Enter a product name. It will be saved permanently and appear in the dropdown for all future sales.
+            </p>
+            <input
+              autoFocus
+              type="text"
+              placeholder="e.g. ELBOW SUPPORT"
+              value={addProductNameInput}
+              onChange={(e) => setAddProductNameInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleConfirmAddProductName();
+                if (e.key === "Escape") { setIsAddNameModalOpen(false); setPendingAddProductIndex(null); }
+              }}
+              className="w-full px-3 py-2.5 text-sm font-semibold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 mb-4 uppercase tracking-wide"
+            />
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => { setIsAddNameModalOpen(false); setPendingAddProductIndex(null); }}
+                className="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAddProductName}
+                disabled={!addProductNameInput.trim()}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Add &amp; Select
               </button>
             </div>
           </div>

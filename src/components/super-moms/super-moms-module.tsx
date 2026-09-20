@@ -24,7 +24,7 @@ const SUPER_MOMS_BATCHES = [
 ];
 
 const EXPORT_COLUMNS: ExportColumn<SuperMomsRecord>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `${idx + 1}` },
   { header: "Member Name", key: "memberName" },
   { header: "Mobile Number", key: "mobileNumber" },
   { header: "Batch", key: "batch" },
@@ -453,7 +453,7 @@ export function SuperMomsModule() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">{viewingRecord.memberName}</h2>
-                  <p className="text-xs text-slate-400 font-mono">{viewingRecord.memberId || `#${viewingRecord.serialNumber}`}</p>
+                  <p className="text-xs text-slate-400 font-mono">{viewingRecord.memberId || `${viewingRecord.serialNumber}`}</p>
                 </div>
               </div>
               <button

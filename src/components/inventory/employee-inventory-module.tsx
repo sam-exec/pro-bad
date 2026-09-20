@@ -161,72 +161,7 @@ export function EmployeeInventoryModule() {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-              Registered SKUs
-            </span>
-            <span className="text-2xl sm:text-3xl font-black text-slate-900 mt-1 block">
-              {summary.totalItems}
-            </span>
-            <span className="text-xs text-slate-400 font-medium">Facility catalog items</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-            <Package className="w-6 h-6" />
-          </div>
-        </div>
 
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-              Available Units
-            </span>
-            <span className="text-2xl sm:text-3xl font-black text-indigo-600 mt-1 block">
-              {summary.totalQuantity}
-            </span>
-            <span className="text-xs text-slate-400 font-medium">Ready for billing</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-            <Boxes className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-              Retail Stock Value
-            </span>
-            <span className="text-2xl sm:text-3xl font-black text-emerald-600 mt-1 block">
-              ₹{summary.totalRetailValue.toLocaleString("en-IN")}
-            </span>
-            <span className="text-xs text-slate-400 font-medium">At current selling prices</span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-            <IndianRupee className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-              Stock Status
-            </span>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-lg font-bold text-amber-600">{summary.lowStockItems} Low</span>
-              <span className="text-slate-300">•</span>
-              <span className="text-lg font-bold text-rose-600">{summary.outOfStockItems} Out</span>
-            </div>
-            <span className="text-xs text-slate-400 font-medium">
-              {summary.inStockItems} items in stock
-            </span>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
 
       {/* Filters Bar */}
       <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
@@ -296,9 +231,6 @@ export function EmployeeInventoryModule() {
             <thead className="bg-slate-50/90 text-slate-600 font-semibold border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4">Product / SKU</th>
-                <th className="py-3 px-3">Category</th>
-                <th className="py-3 px-3 text-right">Selling MRP (₹)</th>
-                <th className="py-3 px-4 text-center">Stock Flow (Op + Pur - Sold)</th>
                 <th className="py-3 px-3 text-right">Available Stock</th>
                 <th className="py-3 px-3 text-center">Status</th>
                 <th className="py-3 px-4 text-right">Action</th>
@@ -307,7 +239,7 @@ export function EmployeeInventoryModule() {
             <tbody className="divide-y divide-slate-100">
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                  <td colSpan={4} className="py-12 text-center text-slate-400">
                     <Package className="w-10 h-10 mx-auto mb-2 opacity-40" />
                     <p className="text-sm font-medium">No products found in facility inventory.</p>
                   </td>
@@ -323,20 +255,6 @@ export function EmployeeInventoryModule() {
                       <div className="font-bold text-slate-900 text-sm">{item.productName}</div>
                       <div className="text-[11px] text-slate-500 font-mono mt-0.5">
                         {item.sku} {item.hsnSac ? `• HSN: ${item.hsnSac}` : ""}
-                      </div>
-                    </td>
-
-                    <td className="py-3 px-3 font-medium text-slate-700">{item.category}</td>
-
-                    <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
-                      ₹{item.sellingPrice.toFixed(2)}
-                    </td>
-
-                    <td className="py-3 px-4 text-center">
-                      <div className="inline-flex items-center gap-1 text-[11px] text-slate-600 bg-slate-50 px-2 py-1 rounded-md border border-slate-200/60 font-mono">
-                        <span>{item.openingStock}</span>
-                        <span className="text-emerald-600">+{item.purchasedQuantity}</span>
-                        <span className="text-rose-500">-{item.soldQuantity}</span>
                       </div>
                     </td>
 
@@ -367,7 +285,7 @@ export function EmployeeInventoryModule() {
           <span>
             Showing {filteredItems.length} products in facility catalog
           </span>
-          <span>Live stock deducted on PRO BD Shop billing</span>
+          <span>Live stock deducted on PBA Store billing</span>
         </div>
       </div>
 

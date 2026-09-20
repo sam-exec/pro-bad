@@ -38,7 +38,7 @@ import { ExportDropdown } from "@/components/admin/common/export-dropdown";
 import { ExportColumn } from "@/utils/export-engine";
 
 const EXPORT_COLUMNS: ExportColumn<AdultCoachMember>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `${idx + 1}` },
   { header: "Member Name", key: "memberName" },
   { header: "Mobile Number", key: "mobileNumber" },
   { header: "Age", key: "age" },
@@ -133,7 +133,13 @@ export function AdultsCoachingModule() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const filteredMembers = useMemo(() => {
+    const seenIds = new Set<string>();
     return members.filter((m) => {
+      if (seenIds.has(m.id)) {
+        return false;
+      }
+      seenIds.add(m.id);
+
       if (searchQuery.trim() && !universalMatch(m, searchQuery)) return false;
       if (selectedMonth !== "All" && m.currentMonth !== selectedMonth) return false;
       if (m.year !== selectedYear) return false;
@@ -271,7 +277,7 @@ export function AdultsCoachingModule() {
           }
         );
 
-        setMembers((prev) => [created, ...prev]);
+        setMembers(adultsService.getSnapshot());
       }
 
       setIsFormOpen(false);

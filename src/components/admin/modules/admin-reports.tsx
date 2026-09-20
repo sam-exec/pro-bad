@@ -37,7 +37,7 @@ const REPORT_ROWS = [
   { module: "Club Membership", workbook: "Membership.xlsx [Sheet 1]", count: "52 Members", revenue: "₹10,24,000", due: "₹24,000", status: "Active" },
   { module: "Flexible 30-Hour Pass", workbook: "Membership.xlsx [Sheet 2]", count: "34 Passes", revenue: "₹4,12,000", due: "₹10,500", status: "Active" },
   { module: "Super Moms Badminton", workbook: "Super Moms.xlsx [Sheet 1]", count: "16 Members", revenue: "₹1,44,000", due: "₹1,800", status: "Active" },
-  { module: "PRO BD Shop", workbook: "PRO_BD_Shop.xlsx [Sheet 1]", count: "240 Orders", revenue: "₹3,84,000", due: "₹0", status: "Active" },
+  { module: "PBA Store", workbook: "PRO_BD_Shop.xlsx [Sheet 1]", count: "240 Orders", revenue: "₹3,84,000", due: "₹0", status: "Active" },
 ];
 
 export function AdminReports() {
@@ -160,7 +160,7 @@ export function AdminReports() {
               className="h-9.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600/20"
             >
               <option value="All">All Operations Modules</option>
-              <option value="PRO BD Shop">PRO BD Shop &amp; Invoices</option>
+              <option value="PBA Store">PBA Store &amp; Invoices</option>
               <option value="Kids Coaching">Kids Coaching</option>
               <option value="Kids Coaching 1-1">Kids Coaching 1-1</option>
               <option value="Adults Coaching">Adults Coaching</option>

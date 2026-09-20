@@ -21,8 +21,8 @@ import { cn } from "@/lib/utils";
 
 const MODULE_TITLES: Record<AdminModuleId, string> = {
   employees: "Employee Directory & Access Control",
-  "pro-bd-shop": "PRO BD Shop Management & Invoicing",
-  sales: "PRO BD Shop Management & Invoicing",
+  "pro-bd-shop": "PBA Store Management & Invoicing",
+  sales: "PBA Store Management & Invoicing",
   inventory: "Master Inventory & Stock Management",
   "purchase-history": "Purchase History & Supplier Bills",
   "kids-coaching": "Kids Coaching",

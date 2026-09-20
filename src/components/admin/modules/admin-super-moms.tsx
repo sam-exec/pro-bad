@@ -24,7 +24,7 @@ const SUPER_MOMS_BATCHES = [
 ];
 
 const EXPORT_COLUMNS: ExportColumn<SuperMomsRecord>[] = [
-  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `#${idx + 1}` },
+  { header: "Serial No", key: "serialNumber", formatter: (_r, idx) => `${idx + 1}` },
   { header: "Member Name", key: "memberName" },
   { header: "Mobile Number", key: "mobileNumber" },
   { header: "Batch", key: "batch" },

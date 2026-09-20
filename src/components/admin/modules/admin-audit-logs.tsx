@@ -94,7 +94,7 @@ export function AdminAuditLogs() {
               <option value="Membership">Membership</option>
               <option value="Flexible Membership">Flexible Membership</option>
               <option value="Super Moms">Super Moms</option>
-              <option value="PRO BD Shop">PRO BD Shop</option>
+              <option value="PBA Store">PBA Store</option>
               <option value="Inventory">Inventory</option>
               <option value="Purchase History">Purchase History</option>
               <option value="Settings">Settings</option>

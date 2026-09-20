@@ -297,11 +297,11 @@ export function AdminSalesModule() {
 
   // Admin Export to PDF
   const handleExportPDF = () => {
-    let reportTitle = "Admin PRO BD Shop Report";
+    let reportTitle = "Admin PBA Store Report";
     let tableHtml = "";
 
     if (activeTab === "all-sales") {
-      reportTitle = "Master PRO BD Shop Transactions Report";
+      reportTitle = "Master PBA Store Transactions Report";
       tableHtml = `
         <table>
           <thead>
